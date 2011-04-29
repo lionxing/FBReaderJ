@@ -19,8 +19,9 @@
 
 package org.geometerplus.fbreader.network.opds;
 
+import org.geometerplus.fbreader.network.atom.ATOMConstants;
 
-interface OPDSConstants {
+interface OPDSConstants extends ATOMConstants {
 	// Feed level
 	String REL_BOOKSHELF = "http://data.fbreader.org/rel/bookshelf";
 	String REL_RECOMMENDATIONS = "http://data.fbreader.org/rel/recommendations";
@@ -52,6 +53,7 @@ interface OPDSConstants {
 	// FIXME: This relations have been removed from OPDS-1.0 standard. Use RelationAlias instead???
 	String REL_COVER = "http://opds-spec.org/cover";
 	String REL_THUMBNAIL = "http://opds-spec.org/thumbnail";
+	String REL_CONTENTS = "contents"; // Book TOC
 
 	// Entry level / OPDS Link Relations
 	String REL_LINK_SIGN_IN = "http://data.fbreader.org/catalog/sign-in";

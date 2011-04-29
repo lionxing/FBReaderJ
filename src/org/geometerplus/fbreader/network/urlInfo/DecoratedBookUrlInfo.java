@@ -17,17 +17,18 @@
  * 02110-1301, USA.
  */
 
-package org.geometerplus.fbreader.network.opds;
+package org.geometerplus.fbreader.network.urlInfo;
 
-interface OPDSFeedReader {
+public class DecoratedBookUrlInfo extends BookUrlInfo {
+	private final String myCleanUrl;
 
-	void processFeedStart();
+	public DecoratedBookUrlInfo(BookUrlInfo base, String url) {
+		super(base.InfoType, base.BookFormat, url);
+		myCleanUrl = base.cleanUrl();
+	}
 
-	// return true to interrupt reading; return false to continue reading
-	boolean processFeedMetadata(OPDSFeedMetadata feed, boolean beforeEntries);
-
-	// return true to interrupt reading; return false to continue reading
-	boolean processFeedEntry(OPDSEntry entry);
-
-	void processFeedEnd();
+	@Override
+	public String cleanUrl() {
+		return myCleanUrl;
+	}
 }

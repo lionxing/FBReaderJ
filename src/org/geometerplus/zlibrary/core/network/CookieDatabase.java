@@ -17,32 +17,23 @@
  * 02110-1301, USA.
  */
 
-package org.geometerplus.fbreader.network;
+package org.geometerplus.zlibrary.core.network;
 
-public class BuyBookReference extends BookReference {
+import java.util.Collection;
 
-	public final String Price;
+import org.apache.http.cookie.Cookie;
 
-	public BuyBookReference(String url, int format, int type, String price) {
-		super(url, format, type);
-		Price = price;
+public abstract class CookieDatabase {
+	private static CookieDatabase ourInstance;
+
+	public static CookieDatabase getInstance() {
+		return ourInstance;
 	}
 
-	public static String price(String price, String currency) {
-		if (price == null || currency == null) {
-			return price;
-		} else if (currency.equals("RUB")) {
-			return price + " \u0440.";
-		} else if (currency.equals("USD")) {
-			return "$" + price;
-		} else if (currency.equals("GBP")) {
-			return "\u00A3" + price;
-		} else if (currency.equals("EUR")) {
-			return "\u20AC" + price;
-		} else if (currency.equals("JPY")) {
-			return "\u00A5" + price;
-		}
-		return currency + " " + price;
+	protected CookieDatabase() {
+		ourInstance = this;
 	}
 
+	protected abstract void saveCookies(Collection<Cookie> cookies);
+	protected abstract Collection<Cookie> loadCookies();
 }

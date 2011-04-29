@@ -19,9 +19,10 @@
 
 package org.geometerplus.fbreader.network.authentication.litres;
 
+import java.util.*;
+
 import java.io.InputStream;
 import java.io.IOException;
-import java.net.URLConnection;
 
 import org.geometerplus.zlibrary.core.network.ZLNetworkException;
 import org.geometerplus.zlibrary.core.network.ZLNetworkRequest;
@@ -29,13 +30,27 @@ import org.geometerplus.zlibrary.core.network.ZLNetworkRequest;
 public class LitResNetworkRequest extends ZLNetworkRequest {
 	public final LitResAuthenticationXMLReader Reader;
 
-	public LitResNetworkRequest(String url, String sslCertificate, LitResAuthenticationXMLReader reader) {
-		super(url, sslCertificate, null);
+	static String clean(String url) {
+		final int index = url.indexOf('?');
+		return index != -1 ? url.substring(0, index) : url;
+	}
+
+	public LitResNetworkRequest(String url, LitResAuthenticationXMLReader reader) {
+		super(clean(url), null, null);
+		final int index = url.indexOf('?');
+		if (index != -1) {
+			for (String param : url.substring(index + 1).split("&")) {
+				String[] pp = param.split("=");
+				if (pp.length == 2) {
+					addPostParameter(pp[0], pp[1]);
+				}
+			}
+		}
 		Reader = reader;
 	}
 
 	@Override
-	public void handleStream(URLConnection connection, InputStream inputStream) throws IOException, ZLNetworkException {
+	public void handleStream(InputStream inputStream, int length) throws IOException, ZLNetworkException {
 		Reader.read(inputStream);
 		ZLNetworkException e = Reader.getException();
 		if (e != null) {
