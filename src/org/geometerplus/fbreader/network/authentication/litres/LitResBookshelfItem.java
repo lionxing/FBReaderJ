@@ -25,12 +25,13 @@ import org.geometerplus.zlibrary.core.resources.ZLResource;
 import org.geometerplus.zlibrary.core.network.ZLNetworkException;
 
 import org.geometerplus.fbreader.network.*;
+import org.geometerplus.fbreader.network.urlInfo.UrlInfoCollection;
 
 abstract class SortedCatalogItem extends NetworkCatalogItem {
 	private final List<NetworkItem> myChildren = new LinkedList<NetworkItem>();
 
 	private SortedCatalogItem(NetworkCatalogItem parent, ZLResource resource, List<NetworkItem> children, int flags) {
-		super(parent.Link, resource.getValue(), resource.getResource("summary").getValue(), "", Accessibility.ALWAYS, flags);
+		super(parent.Link, resource.getValue(), resource.getResource("summary").getValue(), null, Accessibility.ALWAYS, flags);
 		for (NetworkItem child : children) {
 			if (accepts(child)) {
 				myChildren.add(child);
@@ -111,11 +112,7 @@ class ByDateCatalogItem extends SortedCatalogItem {
 
 	@Override
 	protected Comparator<NetworkItem> getComparator() {
-		return new Comparator<NetworkItem>() {
-			public int compare(NetworkItem item0, NetworkItem item1) {
-				return 0;
-			}
-		};
+		return null;
 	}
 
 	@Override
@@ -164,8 +161,8 @@ class BySeriesCatalogItem extends SortedCatalogItem {
 public class LitResBookshelfItem extends NetworkURLCatalogItem {
 	private boolean myForceReload;
 
-	public LitResBookshelfItem(INetworkLink link, String title, String summary, String cover, Map<Integer, String> urlByType, Accessibility accessibility) {
-		super(link, title, summary, cover, urlByType, accessibility, FLAGS_DEFAULT);
+	public LitResBookshelfItem(INetworkLink link, String title, String summary, UrlInfoCollection urls, Accessibility accessibility) {
+		super(link, title, summary, urls, accessibility, FLAGS_DEFAULT);
 	}
 
 	@Override
@@ -198,7 +195,7 @@ public class LitResBookshelfItem extends NetworkURLCatalogItem {
 					listener.onNewItem(Link, item);
 				}
 			} else {
-				//listener.onNewItem(Link, new ByDateCatalogItem(this, children));
+				listener.onNewItem(Link, new ByDateCatalogItem(this, children));
 				listener.onNewItem(Link, new ByAuthorCatalogItem(this, children));
 				listener.onNewItem(Link, new ByTitleCatalogItem(this, children));
 				final BySeriesCatalogItem bySeries = new BySeriesCatalogItem(this, children);

@@ -361,7 +361,7 @@ public final class FileManager extends BaseActivity {
 			myItems.clear();
 		}
 
-		public synchronized void add(FileItem item){
+		public synchronized void add(FileItem item) {
 			myItems.add(item);
 		}
 		

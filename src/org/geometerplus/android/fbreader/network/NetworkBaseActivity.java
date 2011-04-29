@@ -19,6 +19,8 @@
 
 package org.geometerplus.android.fbreader.network;
 
+import java.net.*;
+
 import android.app.*;
 import android.os.Bundle;
 import android.view.*;
@@ -35,6 +37,7 @@ import org.geometerplus.zlibrary.core.image.ZLLoadableImage;
 
 import org.geometerplus.zlibrary.ui.android.image.ZLAndroidImageManager;
 import org.geometerplus.zlibrary.ui.android.image.ZLAndroidImageData;
+import org.geometerplus.zlibrary.ui.android.network.SQLiteCookieDatabase;
 
 import org.geometerplus.fbreader.network.NetworkTree;
 import org.geometerplus.fbreader.network.tree.NetworkBookTree;
@@ -44,6 +47,10 @@ import org.geometerplus.fbreader.network.tree.SearchItemTree;
 import org.geometerplus.android.fbreader.tree.ZLAndroidTree;
 
 abstract class NetworkBaseActivity extends ListActivity implements NetworkView.EventListener {
+	protected static final int BASIC_AUTHENTICATION_CODE = 1;
+	protected static final int CUSTOM_AUTHENTICATION_CODE = 2;
+	protected static final int SIGNUP_CODE = 3;
+
 	protected final ZLResource myResource = ZLResource.resource("networkView");
 
 	public BookDownloaderServiceConnection Connection;
@@ -53,21 +60,14 @@ abstract class NetworkBaseActivity extends ListActivity implements NetworkView.E
 		super.onCreate(icicle);
 		Thread.setDefaultUncaughtExceptionHandler(new org.geometerplus.zlibrary.ui.android.library.UncaughtExceptionHandler(this));
 
+		SQLiteCookieDatabase.init(this);
+
 		Connection = new BookDownloaderServiceConnection();
 		bindService(
 			new Intent(getApplicationContext(), BookDownloaderService.class),
 			Connection,
 			BIND_AUTO_CREATE
 		);
-	}
-
-	@Override
-	public void onDestroy() {
-		if (Connection != null) {
-			unbindService(Connection);
-			Connection = null;
-		}
-		super.onDestroy();
 	}
 
 	@Override
@@ -82,18 +82,26 @@ abstract class NetworkBaseActivity extends ListActivity implements NetworkView.E
 	}
 
 	@Override
-	protected void onStop() {
-		NetworkView.Instance().removeEventListener(this);
-		super.onStop();
-	}
-
-	@Override
 	public void onResume() {
 		super.onResume();
 		getListView().setOnCreateContextMenuListener(this);
 		onModelChanged(); // do the same update actions as upon onModelChanged
 	}
 
+	@Override
+	protected void onStop() {
+		NetworkView.Instance().removeEventListener(this);
+		super.onStop();
+	}
+
+	@Override
+	public void onDestroy() {
+		if (Connection != null) {
+			unbindService(Connection);
+			Connection = null;
+		}
+		super.onDestroy();
+	}
 
 	// method from NetworkView.EventListener
 	public void onModelChanged() {
@@ -249,28 +257,6 @@ abstract class NetworkBaseActivity extends ListActivity implements NetworkView.E
 				.create().show();
 		} else {
 			actions.runAction(this, networkTree, actionCode);
-		}
-	}
-
-	@Override
-	protected Dialog onCreateDialog(int id) {
-		if (!NetworkView.Instance().isInitialized()) {
-			return null;
-		}
-		final AuthenticationDialog dlg = AuthenticationDialog.getDialog();
-		if (dlg != null) {
-			return dlg.createDialog(this);
-		}
-		return null;
-	}
-
-	@Override
-	protected void onPrepareDialog(int id, Dialog dialog) {
-		super.onPrepareDialog(id, dialog);
-
-		final AuthenticationDialog dlg = AuthenticationDialog.getDialog();
-		if (dlg != null) {
-			dlg.prepareDialog(this, dialog);
 		}
 	}
 
