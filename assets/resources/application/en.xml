@@ -440,7 +440,7 @@
 				<node name="top" value="Top margin"/>
 				<node name="bottom" value="Bottom margin"/>
 			</node>
-			<node name="scrollBar" value="Scrollbar">
+			<node name="scrollBar" value="Progress indicator">
 				<node name="summary" value="Scrollbar &amp; footer settings"/>
 				<node name="scrollbarType" value="Scrollbar type">
 					<node name="hide" value="Hide"/>
@@ -454,10 +454,6 @@
 					<node name="summaryOn" value="Show TOC marks in the footer bar"/>
 					<node name="summaryOff" value="Don't show TOC marks in the footer bar"/>
 				</node>
-				<node name="footerLongTap" value="Footer long tap">
-					<node name="longTapRevert" value="Revert position"/>
-					<node name="longTapNavigate" value="Go to position"/>
-				</node>
 				<node name="showProgress" value="Show page number">
 					<node name="summaryOn" value="Show page number in footer"/>
 					<node name="summaryOff" value="Don't show page number in footer"/>
@@ -469,10 +465,6 @@
 				<node name="showClock" value="Show clock">
 					<node name="summaryOn" value="Show clock in footer"/>
 					<node name="summaryOff" value="Don't show clock in footer"/>
-				</node>
-				<node name="isSensitive" value="Navigation by tap on footer">
-					<node name="summaryOn" value="Navigation is enabled"/>
-					<node name="summaryOff" value="Navigation is disabled"/>
 				</node>
 				<node name="font" value="Font family"/>
 			</node>
@@ -514,8 +506,13 @@
 				</node>
 				<node name="animation" value="Animation">
 					<node name="none" value="Scroll with no animation"/>
+					<node name="curl" value="Curl animation"/>
 					<node name="slide" value="Slide animation"/>
 					<node name="shift" value="Shift animation"/>
+				</node>
+				<node name="animationSpeed" value="Animation speed">
+					<node name="fast" value="fast"/>
+					<node name="slow" value="slow"/>
 				</node>
 				<node name="horizontal" value="Horizontal scrolling">
 					<node name="summaryOn" value="Scroll pages horizontally"/>
@@ -620,6 +617,7 @@
 		</node>
 		<node name="AuthenticationDialog">
 			<node name="title" value="Authentication" />
+			<node name="unencryptedWarning" value="Your password will be sent unencrypted" />
 			<node name="login" value="Username" />
 			<node name="password" value="Password" />
 			<node name="skipIP" value="Don't bound to ip-address" />

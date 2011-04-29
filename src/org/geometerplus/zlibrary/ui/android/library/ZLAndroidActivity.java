@@ -115,7 +115,7 @@ public abstract class ZLAndroidActivity extends Activity {
 		} else {
 			ZLApplication.Instance().openFile(fileToOpen);
 		}
-		ZLApplication.Instance().repaintView();
+		ZLApplication.Instance().getViewWidget().repaint();
 	}
 
 	@Override

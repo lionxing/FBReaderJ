@@ -1,3 +1,11 @@
+* 'sign out' feature for basic-auth
+DONE persistent cookie storage
+DONE use expiration cookie info
+DONE common auth dialog for basic auth & litres
+DONE unencrypted protocol warning
+* POST processing
+* SSLCertificate processing
+
 DONE show 'empty basket' message without opening of catalog
 * update basket view if basket content is changed
 * basket summary
@@ -25,8 +33,8 @@ DONE show library name in network book activity
 
 NP: оповещение об изменениях в namespace'ах происходит после того,
     как был обработан тег, объявляющий эти namespace'ы... Нужно сделать:
-    1) вызов namespaceMapChangedHandler перед вызовом startElementHandler
-    2) вызов namespaceMapChangedHandler после вызова endElementHandler
+    DONE 1) вызов namespaceMapChangedHandler перед вызовом startElementHandler
+    DONE 2) вызов namespaceMapChangedHandler после вызова endElementHandler
     3) вызов namespaceMapChangedHandler для пустых тегов <tagname />
 
 ------------------------------
