@@ -19,6 +19,9 @@
 
 package org.geometerplus.android.fbreader.network;
 
+import java.util.Map;
+import java.util.HashMap;
+
 import android.content.Context;
 import android.database.Cursor;
 import android.database.sqlite.SQLiteDatabase;
@@ -26,8 +29,7 @@ import android.database.sqlite.SQLiteStatement;
 
 import org.geometerplus.zlibrary.ui.android.library.ZLAndroidApplication;
 
-import org.geometerplus.fbreader.network.ICustomNetworkLink;
-import org.geometerplus.fbreader.network.NetworkDatabase;
+import org.geometerplus.fbreader.network.*;
 import org.geometerplus.fbreader.network.urlInfo.*;
 
 import org.geometerplus.android.util.SQLiteUtil;
@@ -232,6 +234,28 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 			}
 		});
 	}
+
+	@Override
+	protected Map<String,String> getLinkExtras(INetworkLink link) {
+		final HashMap<String,String> extras = new HashMap<String,String>();
+		final Cursor cursor = myDatabase.rawQuery(
+			"SELECT key,value FROM Extras WHERE link_id = ?",
+			new String[] { String.valueOf(link.getId()) }
+		);
+		while (cursor.moveToNext()) {
+			extras.put(cursor.getString(0), cursor.getString(1));
+		}
+		return extras;
+	}
+
+	@Override
+	protected void setLinkExtras(INetworkLink link, Map<String,String> extras) {
+		myDatabase.rawQuery(
+			"DELETE FROM Extras WHERE link_id = ?",
+			new String[] { String.valueOf(link.getId()) }
+		);
+		// TODO: put extras
+	}
 	
 	private void createTables() {
 		myDatabase.execSQL(
@@ -295,5 +319,27 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 		myDatabase.execSQL("UPDATE LinkUrls SET key='Catalog' WHERE key='main'");
 		myDatabase.execSQL("UPDATE LinkUrls SET key='Search' WHERE key='search'");
 		myDatabase.execSQL("UPDATE LinkUrls SET key='Image' WHERE key='icon'");
+	}
+
+	private void updateTables4() {
+		myDatabase.execSQL("ALTER TABLE LinkUrls RENAME TO LinkUrls_Obsolete");
+		myDatabase.execSQL(
+			"CREATE TABLE LinkUrls(" +
+				"key TEXT NOT NULL," +
+				"link_id INTEGER NOT NULL REFERENCES Links(link_id)," +
+				"url TEXT," +
+				"update_time INTEGER," +
+				"CONSTRAINT LinkUrls_PK PRIMARY KEY (key, link_id))"
+		);
+		myDatabase.execSQL("INSERT INTO LinkUrls (key,link_id,url) SELECT key,link_id,url FROM LinkUrls_Obsolete");
+		myDatabase.execSQL("DROP TABLE LinkUrls_Obsolete");
+
+		myDatabase.execSQL(
+			"CREATE IF NOT EXISTS TABLE Extras(" +
+				"link_id INTEGER NOT NULL REFERENCES Links(link_id)," +
+				"key TEXT NOT NULL," +
+				"value TEXT NOT NULL," +
+				"CONSTRAINT Extras_PK PRIMARY KEY (key, link_id))"
+		);
 	}
 }

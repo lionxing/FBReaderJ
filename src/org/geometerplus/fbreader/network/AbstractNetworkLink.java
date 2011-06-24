@@ -34,6 +34,8 @@ public abstract class AbstractNetworkLink implements INetworkLink, Basket {
 
 	private ZLStringListOption myBooksInBasketOption;
 
+	private int myId;
+
 	/**
 	 * Creates new NetworkLink instance.
 	 *
@@ -43,12 +45,21 @@ public abstract class AbstractNetworkLink implements INetworkLink, Basket {
 	 * @param language   language of the catalog. If <code>null</code> we assume this catalog is multilanguage.
 	 * @param infos      collection of URL infos; must always contain one URL with <code>UrlInfo.Type.Catalog</code> identifier
 	 */
-	public AbstractNetworkLink(String siteName, String title, String summary, String language, UrlInfoCollection<UrlInfoWithDate> infos) {
+	public AbstractNetworkLink(int id, String siteName, String title, String summary, String language, UrlInfoCollection<UrlInfoWithDate> infos) {
+		myId = id;
 		mySiteName = siteName;
 		myTitle = title;
 		mySummary = summary;
 		myLanguage = language != null ? language : "multi";
 		myInfos = new UrlInfoCollection<UrlInfoWithDate>(infos);
+	}
+
+	public int getId() {
+		return myId;
+	}
+
+	public void setId(int id) {
+		myId = id;
 	}
 
 	public final String getSiteName() {

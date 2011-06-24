@@ -86,8 +86,7 @@ class OPDSLinkXMLReader extends OPDSXMLReader implements OPDSConstants {
 
 		public boolean processFeedEntry(OPDSEntry entry) {
 			final String id = entry.Id.Uri;
-			if (id == null || id.length() <= ENTRY_ID_PREFIX.length()
-					|| !id.startsWith(ENTRY_ID_PREFIX)) {
+			if (id == null || !id.startsWith(ENTRY_ID_PREFIX)) {
 				return false;
 			}
 			final String siteName = id.substring(ENTRY_ID_PREFIX.length());

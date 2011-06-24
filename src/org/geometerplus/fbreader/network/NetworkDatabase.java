@@ -19,6 +19,8 @@
 
 package org.geometerplus.fbreader.network;
 
+import java.util.Map;
+
 import org.geometerplus.fbreader.network.urlInfo.*;
 
 public abstract class NetworkDatabase {
@@ -41,4 +43,7 @@ public abstract class NetworkDatabase {
 	protected abstract void loadCustomLinks(ICustomLinksHandler handler);
 	protected abstract void saveCustomLink(ICustomNetworkLink link);
 	protected abstract void deleteCustomLink(ICustomNetworkLink link);
+
+	protected abstract Map<String,String> getLinkExtras(INetworkLink link);
+	protected abstract void setLinkExtras(INetworkLink link, Map<String,String> extras);
 }
