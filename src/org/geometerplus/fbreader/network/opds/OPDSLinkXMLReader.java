@@ -42,12 +42,8 @@ class OPDSLinkXMLReader extends OPDSXMLReader implements OPDSConstants {
 		private final HashMap<RelationAlias, String> myRelationAliases = new HashMap<RelationAlias, String>();
 		private final LinkedHashMap<String,String> myExtraData = new LinkedHashMap<String,String>(); 
 
-		private ATOMUpdated myUpdatedTime;
-		private ATOMUpdated myReadAfterTime;
-
-		public FeedHandler(NetworkLibrary.OnNewLinkListener listener, ATOMUpdated readAfter) {
+		public FeedHandler(NetworkLibrary.OnNewLinkListener listener) {
 			myListener = listener;
-			myReadAfterTime = readAfter;
 		}
 
 		public void setAuthenticationType(String type) {
@@ -76,10 +72,6 @@ class OPDSLinkXMLReader extends OPDSXMLReader implements OPDSConstants {
 			myUrlRewritingRules.clear();
 			myRelationAliases.clear();
 			myExtraData.clear();
-		}
-
-		public ATOMUpdated getUpdatedTime() {
-			return myUpdatedTime;
 		}
 
 		private static final String ENTRY_ID_PREFIX = "urn:fbreader-org-catalog:";
@@ -173,6 +165,7 @@ class OPDSLinkXMLReader extends OPDSXMLReader implements OPDSConstants {
 			final String summaryString = summary != null ? summary.toString() : null;
 
 			OPDSNetworkLink opdsLink = new OPDSNetworkLink(
+				-1,
 				siteName,
 				titleString,
 				summaryString,
@@ -207,36 +200,22 @@ class OPDSLinkXMLReader extends OPDSXMLReader implements OPDSConstants {
 		}
 
 		public boolean processFeedMetadata(OPDSFeedMetadata feed, boolean beforeEntries) {
-			myUpdatedTime = feed.Updated;
-			if (myUpdatedTime != null && myReadAfterTime != null
-					&& myUpdatedTime.compareTo(myReadAfterTime) <= 0) {
-				return true;
-			}
 			return myListener == null; // no listener -- no need to proceed
 		}
 
 		public void processFeedStart() {
-			myUpdatedTime = null;
 		}
 
 		public void processFeedEnd() {
 		}
 	}
 
-	public OPDSLinkXMLReader() {
-		super(new FeedHandler(null, null), false);
-	}
-
-	public OPDSLinkXMLReader(NetworkLibrary.OnNewLinkListener listener, ATOMUpdated readAfter) {
-		super(new FeedHandler(listener, readAfter), false);
+	public OPDSLinkXMLReader(NetworkLibrary.OnNewLinkListener listener) {
+		super(new FeedHandler(listener), false);
 	}
 
 	private FeedHandler getFeedHandler() {
 		return (FeedHandler)getATOMFeedHandler();
-	}
-
-	public ATOMUpdated getUpdatedTime() {
-		return getFeedHandler().getUpdatedTime();
 	}
 
 	private static final String FBREADER_ADVANCED_SEARCH = "advancedSearch";

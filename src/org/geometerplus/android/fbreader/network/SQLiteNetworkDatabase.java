@@ -44,7 +44,7 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 
 	private void migrate() {
 		final int version = myDatabase.getVersion();
-		final int currentCodeVersion = 4;
+		final int currentCodeVersion = 5;
 		if (version >= currentCodeVersion) {
 			return;
 		}
@@ -58,6 +58,8 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 				updateTables2();
 			case 3:
 				updateTables3();
+			case 4:
+				updateTables4();
 		}
 		myDatabase.setTransactionSuccessful();
 		myDatabase.endTransaction();
@@ -77,14 +79,17 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	}
 
 	@Override
-	protected void loadCustomLinks(ICustomLinksHandler handler) {
-		final Cursor cursor = myDatabase.rawQuery("SELECT link_id,title,site_name,summary FROM Links", null);
+	protected List<INetworkLink> loadLinks() {
+		final List<INetworkLink> links = new LinkedList<INetworkLink>();
+		final Cursor cursor = myDatabase.rawQuery("SELECT link_id,title,catalog_id,summary,is_predefined,is_enabled FROM Links", null);
 		final UrlInfoCollection<UrlInfoWithDate> linksMap = new UrlInfoCollection<UrlInfoWithDate>();
 		while (cursor.moveToNext()) {
 			final int id = cursor.getInt(0);
 			final String title = cursor.getString(1);
-			final String siteName = cursor.getString(2);
+			final String catalogId = cursor.getString(2);
 			final String summary = cursor.getString(3);
+			final boolean isPredefined = cursor.getInt(4) > 0;
+			final boolean isEnabled = cursor.getInt(5) > 0;
 
 			linksMap.clear();
 			final Cursor linksCursor = myDatabase.rawQuery("SELECT key,url,update_time FROM LinkUrls WHERE link_id = " + id, null);
@@ -102,9 +107,11 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 			}
 			linksCursor.close();
 
-			handler.handleCustomLinkData(id, siteName, title, summary, linksMap);
+			links.add(new OPDSNetworkLink());
+			//handler.handleCustomLinkData(id, siteName, title, summary, linksMap);
 		}
 		cursor.close();
+		return links;
 	}
 
 	private SQLiteStatement myInsertCustomLinkStatement;
@@ -113,7 +120,7 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	private SQLiteStatement myUpdateCustomLinkUrlStatement;
 	private SQLiteStatement myDeleteCustomLinkUrlStatement;
 	@Override
-	protected void saveCustomLink(final ICustomNetworkLink link) {
+	protected void saveLink(final INetworkLink link) {
 		executeAsATransaction(new Runnable() {
 			public void run() {
 				final SQLiteStatement statement;
@@ -208,7 +215,7 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	private SQLiteStatement myDeleteAllCustomLinksStatement;
 	private SQLiteStatement myDeleteCustomLinkStatement;
 	@Override
-	protected void deleteCustomLink(final ICustomNetworkLink link) {
+	protected void deleteLink(final INetworkLink link) {
 		if (link.getId() == ICustomNetworkLink.INVALID_ID) {
 			return;
 		}
@@ -322,6 +329,11 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	}
 
 	private void updateTables4() {
+		myDatabase.execSQL("ALTER TABLE Links ADD COLUMN is_predefined INTEGER");
+		myDatabase.execSQL("UPDATE Links SET is_predefined=0");
+
+		myDatabase.execSQL("ALTER TABLE Links ADD COLUMN is_enabled INTEGER DEFAULT 1");
+
 		myDatabase.execSQL("ALTER TABLE LinkUrls RENAME TO LinkUrls_Obsolete");
 		myDatabase.execSQL(
 			"CREATE TABLE LinkUrls(" +
@@ -335,11 +347,25 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 		myDatabase.execSQL("DROP TABLE LinkUrls_Obsolete");
 
 		myDatabase.execSQL(
-			"CREATE IF NOT EXISTS TABLE Extras(" +
+			"CREATE TABLE IF NOT EXISTS Extras(" +
 				"link_id INTEGER NOT NULL REFERENCES Links(link_id)," +
 				"key TEXT NOT NULL," +
 				"value TEXT NOT NULL," +
 				"CONSTRAINT Extras_PK PRIMARY KEY (key, link_id))"
 		);
+	}
+
+	private void updateTables5() {
+		myDatabase.execSQL("ALTER TABLE Links RENAME TO Links_Obsolete");
+		myDatabase.execSQL(
+			"CREATE TABLE Links(" +
+				"link_id INTEGER PRIMARY KEY," +
+				"catalog_id TEXT UNIQUE," +
+				"title TEXT NOT NULL," +
+				"summary TEXT," +
+				"is_predefined INTEGER," +
+				"is_enabled INTEGER");
+		myDatabase.execSQL("INSERT INTO Links (link_id,catalog_id,title,summary,is_predefined,is_enabled) SELECT link_id,site_name,title,summary,is_predefined,is_enabled FROM Links_Obsolete");
+		myDatabase.execSQL("DROP TABLE Links_Obsolete");
 	}
 }

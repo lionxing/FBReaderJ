@@ -168,7 +168,7 @@ public class NetworkLibrary {
 		}
 
 		try {
-			OPDSLinkReader.loadOPDSLinks(OPDSLinkReader.CACHE_LOAD, new OnNewLinkListener() {
+			OPDSLinkReader.loadOPDSLinks(new OnNewLinkListener() {
 				public void onNewLink(INetworkLink link) {
 					myLinks.add(link);
 				}
@@ -229,9 +229,8 @@ public class NetworkLibrary {
 		synchronized (myBackgroundLock) {
 			myBackgroundLinks = new ArrayList<INetworkLink>();
 
-			final int cacheMode = clearCache ? OPDSLinkReader.CACHE_CLEAR : OPDSLinkReader.CACHE_UPDATE;
 			try {
-				OPDSLinkReader.loadOPDSLinks(cacheMode, new OnNewLinkListener() {
+				OPDSLinkReader.loadOPDSLinks(new OnNewLinkListener() {
 					public void onNewLink(INetworkLink link) {
 						myBackgroundLinks.add(link);
 					}

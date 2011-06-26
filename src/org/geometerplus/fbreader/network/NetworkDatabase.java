@@ -36,13 +36,9 @@ public abstract class NetworkDatabase {
 
 	protected abstract void executeAsATransaction(Runnable actions);
 
-	public interface ICustomLinksHandler {
-		void handleCustomLinkData(int id, String siteName, String title, String summary, UrlInfoCollection<UrlInfoWithDate> infos);
-	}
-
-	protected abstract void loadCustomLinks(ICustomLinksHandler handler);
-	protected abstract void saveCustomLink(ICustomNetworkLink link);
-	protected abstract void deleteCustomLink(ICustomNetworkLink link);
+	protected abstract List<INetworkLink> listLinks();
+	protected abstract void saveLink(INetworkLink link);
+	protected abstract void deleteLink(INetworkLink link);
 
 	protected abstract Map<String,String> getLinkExtras(INetworkLink link);
 	protected abstract void setLinkExtras(INetworkLink link, Map<String,String> extras);
