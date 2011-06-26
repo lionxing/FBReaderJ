@@ -19,8 +19,7 @@
 
 package org.geometerplus.android.fbreader.network;
 
-import java.util.Map;
-import java.util.HashMap;
+import java.util.*;
 
 import android.content.Context;
 import android.database.Cursor;
@@ -81,7 +80,8 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	@Override
 	protected List<INetworkLink> loadLinks() {
 		final List<INetworkLink> links = new LinkedList<INetworkLink>();
-		final Cursor cursor = myDatabase.rawQuery("SELECT link_id,title,catalog_id,summary,is_predefined,is_enabled FROM Links", null);
+
+		final Cursor cursor = myDatabase.rawQuery("SELECT link_id,title,site_name,summary,is_predefined,is_enabled FROM Links", null);
 		final UrlInfoCollection<UrlInfoWithDate> linksMap = new UrlInfoCollection<UrlInfoWithDate>();
 		while (cursor.moveToNext()) {
 			final int id = cursor.getInt(0);
@@ -107,10 +107,13 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 			}
 			linksCursor.close();
 
-			links.add(new OPDSNetworkLink());
-			//handler.handleCustomLinkData(id, siteName, title, summary, linksMap);
+			final INetworkLink l = createLink(id, siteName, title, summary, linksMap);
+			if (l != null) {
+				links.add(l);
+			}
 		}
 		cursor.close();
+
 		return links;
 	}
 
@@ -127,7 +130,7 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 				if (link.getId() == ICustomNetworkLink.INVALID_ID) {
 					if (myInsertCustomLinkStatement == null) {
 						myInsertCustomLinkStatement = myDatabase.compileStatement(
-							"INSERT INTO Links (title,site_name,summary) VALUES (?,?,?)"
+							"INSERT INTO Links (title,site_name,summary,is_predefined,is_enabled) VALUES (?,?,?,?,?)"
 						);
 					}
 					statement = myInsertCustomLinkStatement;
@@ -150,6 +153,8 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 					new UrlInfoCollection<UrlInfoWithDate>();
 
 				if (statement == myInsertCustomLinkStatement) {
+					statement.bindLong(4, 0);
+					statement.bindLong(5, 1);
 					id = statement.executeInsert();
 					link.setId((int) id);
 				} else {
