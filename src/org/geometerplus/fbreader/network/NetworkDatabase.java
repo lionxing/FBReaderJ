@@ -23,7 +23,8 @@ import java.util.Map;
 import java.util.List;
 
 import org.geometerplus.fbreader.network.urlInfo.*;
-import org.geometerplus.fbreader.network.opds.OPDSCustomLink;
+import org.geometerplus.fbreader.network.opds.OPDSCustomNetworkLink;
+import org.geometerplus.fbreader.network.opds.OPDSPredefinedNetworkLink;
 
 public abstract class NetworkDatabase {
 	private static NetworkDatabase ourInstance;
@@ -38,11 +39,14 @@ public abstract class NetworkDatabase {
 
 	protected abstract void executeAsATransaction(Runnable actions);
 
-	protected INetworkLink createLink(int id, String siteName, String title, String summary, UrlInfoCollection<UrlInfoWithDate> infos) {
+	protected INetworkLink createLink(int id, String predefinedId, String siteName, String title, String summary, String language, UrlInfoCollection<UrlInfoWithDate> infos) {
 		if (siteName == null || title == null || infos.getInfo(UrlInfo.Type.Catalog) == null) {
 			return null;
 		}
-		return new OPDSCustomLink(id, siteName, title, summary, infos);
+		return
+			predefinedId != null
+			? new OPDSPredefinedNetworkLink(id, predefinedId, siteName, title, summary, language, infos)
+			: new OPDSCustomNetworkLink(id, siteName, title, summary, language, infos);
 	}
 
 	protected abstract List<INetworkLink> listLinks();

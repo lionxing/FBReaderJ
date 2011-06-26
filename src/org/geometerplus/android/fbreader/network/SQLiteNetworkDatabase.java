@@ -43,7 +43,7 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 
 	private void migrate() {
 		final int version = myDatabase.getVersion();
-		final int currentCodeVersion = 5;
+		final int currentCodeVersion = 6;
 		if (version >= currentCodeVersion) {
 			return;
 		}
@@ -59,6 +59,8 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 				updateTables3();
 			case 4:
 				updateTables4();
+			case 5:
+				updateTables5();
 		}
 		myDatabase.setTransactionSuccessful();
 		myDatabase.endTransaction();
@@ -78,18 +80,18 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	}
 
 	@Override
-	protected List<INetworkLink> listLinks() {
+	protected synchronized List<INetworkLink> listLinks() {
 		final List<INetworkLink> links = new LinkedList<INetworkLink>();
 
-		final Cursor cursor = myDatabase.rawQuery("SELECT link_id,title,site_name,summary,is_predefined,is_enabled FROM Links", null);
+		final Cursor cursor = myDatabase.rawQuery("SELECT link_id,predefined_id,title,site_name,summary,language FROM Links", null);
 		final UrlInfoCollection<UrlInfoWithDate> linksMap = new UrlInfoCollection<UrlInfoWithDate>();
 		while (cursor.moveToNext()) {
 			final int id = cursor.getInt(0);
-			final String title = cursor.getString(1);
-			final String catalogId = cursor.getString(2);
-			final String summary = cursor.getString(3);
-			final boolean isPredefined = cursor.getInt(4) > 0;
-			final boolean isEnabled = cursor.getInt(5) > 0;
+			final String predefinedId = cursor.getString(1);
+			final String title = cursor.getString(2);
+			final String siteName = cursor.getString(3);
+			final String summary = cursor.getString(4);
+			final String language = cursor.getString(5);
 
 			linksMap.clear();
 			final Cursor linksCursor = myDatabase.rawQuery("SELECT key,url,update_time FROM LinkUrls WHERE link_id = " + id, null);
@@ -107,7 +109,7 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 			}
 			linksCursor.close();
 
-			final INetworkLink l = createLink(id, siteName, title, summary, linksMap);
+			final INetworkLink l = createLink(id, predefinedId, siteName, title, summary, language, linksMap);
 			if (l != null) {
 				links.add(l);
 			}
@@ -121,24 +123,23 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 	private SQLiteStatement myUpdateCustomLinkStatement;
 	private SQLiteStatement myInsertCustomLinkUrlStatement;
 	private SQLiteStatement myUpdateCustomLinkUrlStatement;
-	private SQLiteStatement myDeleteCustomLinkUrlStatement;
 	@Override
-	protected void saveLink(final INetworkLink link) {
+	protected synchronized void saveLink(final INetworkLink link) {
 		executeAsATransaction(new Runnable() {
 			public void run() {
 				final SQLiteStatement statement;
 				if (link.getId() == INetworkLink.INVALID_ID) {
 					if (myInsertCustomLinkStatement == null) {
 						myInsertCustomLinkStatement = myDatabase.compileStatement(
-							"INSERT INTO Links (title,site_name,summary,is_predefined,is_enabled) VALUES (?,?,?,?,?)"
+							"INSERT INTO Links (title,site_name,summary,language,predefined_id) VALUES (?,?,?,?,?)"
 						);
 					}
 					statement = myInsertCustomLinkStatement;
 				} else {
 					if (myUpdateCustomLinkStatement == null) {
 						myUpdateCustomLinkStatement = myDatabase.compileStatement(
-							"UPDATE Links SET title = ?, site_name = ?, summary =? "
-								+ "WHERE link_id = ?"
+							"UPDATE Links SET title = ?, site_name = ?, summary = ?, language = ?"
+								+ " WHERE link_id = ?"
 						);
 					}
 					statement = myUpdateCustomLinkStatement;
@@ -147,19 +148,23 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 				statement.bindString(1, link.getTitle());
 				statement.bindString(2, link.getSiteName());
 				SQLiteUtil.bindString(statement, 3, link.getSummary());
+				SQLiteUtil.bindString(statement, 4, link.getLanguage());
 
 				final long id;
 				final UrlInfoCollection<UrlInfoWithDate> linksMap =
 					new UrlInfoCollection<UrlInfoWithDate>();
 
 				if (statement == myInsertCustomLinkStatement) {
-					statement.bindLong(4, link instanceof ICustomNetworkLink ? 0 : 1);
-					statement.bindLong(5, 1);
+					if (link instanceof IPredefinedNetworkLink) {
+						statement.bindString(5, ((IPredefinedNetworkLink)link).getPredefinedId());
+					} else {
+						SQLiteUtil.bindString(statement, 5, null);
+					}
 					id = statement.executeInsert();
-					link.setId((int) id);
+					link.setId((int)id);
 				} else {
 					id = link.getId();
-					statement.bindLong(4, id);
+					statement.bindLong(5, id);
 					statement.execute();
 					
 					final Cursor linksCursor = myDatabase.rawQuery("SELECT key,url,update_time FROM LinkUrls WHERE link_id = " + link.getId(), null);
@@ -205,41 +210,31 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 					urlStatement.execute();
 				}
 				for (UrlInfo info : linksMap.getAllInfos()) {
-					if (myDeleteCustomLinkUrlStatement == null) {
-						myDeleteCustomLinkUrlStatement = myDatabase.compileStatement(
-								"DELETE FROM LinkUrls WHERE link_id = ? AND key = ?");
-					}
-					myDeleteCustomLinkUrlStatement.bindLong(1, id);
-					myDeleteCustomLinkUrlStatement.bindString(2, info.InfoType.toString());
-					myDeleteCustomLinkUrlStatement.execute();
+					myDatabase.delete("LinkUrls", "link_id = ? AND key = ?",
+						new String[] { String.valueOf(id), info.InfoType.toString() }
+					);
 				}
 			}
 		});
 	}
 
 	@Override
-	protected void deleteLink(final INetworkLink link) {
+	protected synchronized void deleteLink(final INetworkLink link) {
 		if (link.getId() == INetworkLink.INVALID_ID) {
 			return;
 		}
 		executeAsATransaction(new Runnable() {
 			public void run() {
 				final String stringLinkId = String.valueOf(link.getId());
-				myDatabase.rawQuery(
-					"DELETE FROM LinkUrls WHERE link_id = ?",
-					new String[] { stringLinkId }
-				);
-				myDatabase.rawQuery(
-					"DELETE FROM Links WHERE link_id = ?",
-					new String[] { stringLinkId }
-				);
+				myDatabase.delete("Links", "link_id = ?", new String[] { stringLinkId });
+				myDatabase.delete("LinkUrls", "link_id = ?", new String[] { stringLinkId });
 				link.setId(INetworkLink.INVALID_ID);
 			}
 		});
 	}
 
 	@Override
-	protected Map<String,String> getLinkExtras(INetworkLink link) {
+	protected synchronized Map<String,String> getLinkExtras(INetworkLink link) {
 		final HashMap<String,String> extras = new HashMap<String,String>();
 		final Cursor cursor = myDatabase.rawQuery(
 			"SELECT key,value FROM Extras WHERE link_id = ?",
@@ -248,41 +243,42 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 		while (cursor.moveToNext()) {
 			extras.put(cursor.getString(0), cursor.getString(1));
 		}
+		cursor.close();
 		return extras;
 	}
 
 	@Override
-	protected void setLinkExtras(INetworkLink link, Map<String,String> extras) {
-		if (link.getId() == INetworkLink.INVALID_ID) {
-			return;
-		}
-		final String stringLinkId = String.valueOf(link.getId());
-		myDatabase.rawQuery(
-			"DELETE FROM Extras WHERE link_id = ?",
-			new String[] { stringLinkId }
-		);
-		for (Map.Entry<String,String> entry : extras.entrySet()) {
-			myDatabase.rawQuery(
-				"INSERT INTO Extras (link_id,key,value) VALUES (?,?,?)",
-				new String[] { stringLinkId, entry.getKey(), entry.getValue() }
-			);
-		}
+	protected synchronized void setLinkExtras(INetworkLink link, Map<String,String> extras) {
+		executeAsATransaction(new Runnable() {
+			public void run() {
+				if (link.getId() == INetworkLink.INVALID_ID) {
+					return;
+				}
+				myDatabase.delete("Extras", "link_id = ?", new String[] { String.valueOf(link.getId()) });
+				for (Map.Entry<String,String> entry : extras.entrySet()) {
+					myDatabase.execSQL(
+						"INSERT INTO Extras (link_id,key,value) VALUES (?,?,?)",
+						new Object[] { link.getId(), entry.getKey(), entry.getValue() }
+					);
+				}
+			}
+		});
 	}
 	
 	private void createTables() {
 		myDatabase.execSQL(
-				"CREATE TABLE CustomLinks(" +
-					"link_id INTEGER PRIMARY KEY," +
-					"title TEXT UNIQUE NOT NULL," +
-					"site_name TEXT NOT NULL," +
-					"summary TEXT," +
-					"icon TEXT)");
+			"CREATE TABLE CustomLinks(" +
+				"link_id INTEGER PRIMARY KEY," +
+				"title TEXT UNIQUE NOT NULL," +
+				"site_name TEXT NOT NULL," +
+				"summary TEXT," +
+				"icon TEXT)");
 		myDatabase.execSQL(
-				"CREATE TABLE CustomLinkUrls(" +
-					"key TEXT NOT NULL," +
-					"link_id INTEGER NOT NULL REFERENCES CustomLinks(link_id)," +
-					"url TEXT NOT NULL," +
-					"CONSTRAINT CustomLinkUrls_PK PRIMARY KEY (key, link_id))");
+			"CREATE TABLE CustomLinkUrls(" +
+				"key TEXT NOT NULL," +
+				"link_id INTEGER NOT NULL REFERENCES CustomLinks(link_id)," +
+				"url TEXT NOT NULL," +
+				"CONSTRAINT CustomLinkUrls_PK PRIMARY KEY (key, link_id))");
 	}
 
 	private void updateTables1() {
@@ -365,12 +361,13 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 		myDatabase.execSQL(
 			"CREATE TABLE Links(" +
 				"link_id INTEGER PRIMARY KEY," +
-				"catalog_id TEXT UNIQUE," +
 				"title TEXT NOT NULL," +
+				"site_name TEXT NOT NULL," +
 				"summary TEXT," +
-				"is_predefined INTEGER," +
-				"is_enabled INTEGER");
-		myDatabase.execSQL("INSERT INTO Links (link_id,catalog_id,title,summary,is_predefined,is_enabled) SELECT link_id,site_name,title,summary,is_predefined,is_enabled FROM Links_Obsolete");
+				"language TEXT," +
+				"predefined_id TEXT," +
+				"is_enabled INTEGER)");
+		myDatabase.execSQL("INSERT INTO Links (link_id,title,site_name,summary,language,predefined_id,is_enabled) SELECT link_id,title,site_name,summary,NULL,NULL,is_enabled FROM Links_Obsolete");
 		myDatabase.execSQL("DROP TABLE Links_Obsolete");
 	}
 }
