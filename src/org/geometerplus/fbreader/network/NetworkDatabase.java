@@ -51,10 +51,4 @@ public abstract class NetworkDatabase {
 
 	protected abstract Map<String,String> getLinkExtras(INetworkLink link);
 	protected abstract void setLinkExtras(INetworkLink link, Map<String,String> extras);
-
-	protected abstract List<INetworkLink> loadLinks();
-	protected abstract void saveCustomLink(ICustomNetworkLink link);
-	protected abstract void deleteCustomLink(ICustomNetworkLink link);
-	protected abstract Map<String,String> getLinkExtras(INetworkLink link);
-	protected abstract void setLinkExtras(INetworkLink link, Map<String,String> extras);
 }
