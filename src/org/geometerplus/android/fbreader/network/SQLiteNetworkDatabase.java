@@ -262,11 +262,20 @@ class SQLiteNetworkDatabase extends NetworkDatabase {
 
 	@Override
 	protected void setLinkExtras(INetworkLink link, Map<String,String> extras) {
+		if (link.getId() == -1) {
+			return;
+		}
+		final String stringLinkId = String.valueOf(link.getId());
 		myDatabase.rawQuery(
 			"DELETE FROM Extras WHERE link_id = ?",
-			new String[] { String.valueOf(link.getId()) }
+			new String[] { stringLinkId }
 		);
-		// TODO: put extras
+		for (Map.Entry<String,String> entry : extras.entrySet()) {
+			myDatabase.rawQuery(
+				"INSERT INTO Extras (link_id,key,value) VALUES (?,?,?)",
+				new String[] { stringLinkId, entry.getKey(), entry.getValue() }
+			);
+		}
 	}
 	
 	private void createTables() {

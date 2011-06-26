@@ -26,6 +26,8 @@ import org.geometerplus.zlibrary.core.options.ZLStringListOption;
 import org.geometerplus.fbreader.network.urlInfo.*;
 
 public abstract class AbstractNetworkLink implements INetworkLink, Basket {
+	private int myId;
+
 	protected String mySiteName;
 	protected String myTitle;
 	protected String mySummary;
