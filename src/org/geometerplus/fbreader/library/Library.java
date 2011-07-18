@@ -33,19 +33,7 @@ import org.geometerplus.fbreader.formats.FormatPlugin;
 import org.geometerplus.fbreader.formats.PluginCollection;
 import org.geometerplus.fbreader.Paths;
 
-public final class Library {
-	public interface ChangeListener {
-		public enum Code {
-			BookAdded,
-			BookRemoved,
-			StatusChanged,
-			Found,
-			NotFound
-		}
-
-		void onLibraryChanged(Code code);
-	}
-
+public final class Library implements LibraryChangeListener {
 	public static final String ROOT_SEARCH_RESULTS = "searchResults";
 	public static final String ROOT_FAVORITES = "favorites";
 	public static final String ROOT_RECENT = "recent";
@@ -63,15 +51,16 @@ public final class Library {
 	private final RootTree myRootTree = new RootTree(this);
 	private boolean myDoGroupTitlesByFirstLetter;
 
-	private final List<ChangeListener> myListeners = new LinkedList<ChangeListener>();
+	private final List<LibraryChangeListener> myListeners = new LinkedList<LibraryChangeListener>();
 
 	private final static int STATUS_LOADING = 1;
 	private final static int STATUS_SEARCHING = 2;
 	private volatile int myStatusMask = 0;
+	private volatile boolean myLibraryClosed = false;
 
 	private synchronized void setStatus(int status) {
 		myStatusMask = status;
-		fireModelChangedEvent(ChangeListener.Code.StatusChanged);
+		fireModelChangedEvent(Code.StatusChanged);
 	}
 
 	public Library() {
@@ -81,6 +70,11 @@ public final class Library {
 		new FirstLevelTree(myRootTree, ROOT_BY_TITLE);
 		new FirstLevelTree(myRootTree, ROOT_BY_TAG);
 		new FileFirstLevelTree(myRootTree, ROOT_FILE_TREE);
+		addChangeListener(this);
+	}
+
+	public void close() {
+		myLibraryClosed = true;
 	}
 
 	public LibraryTree getRootTree() {
@@ -91,11 +85,11 @@ public final class Library {
 		return (FirstLevelTree)myRootTree.getSubTree(key);
 	}
 
-	public synchronized void addChangeListener(ChangeListener listener) {
+	public synchronized void addChangeListener(LibraryChangeListener listener) {
 		myListeners.add(listener);
 	}
 
-	public synchronized void removeChangeListener(ChangeListener listener) {
+	public synchronized void removeChangeListener(LibraryChangeListener listener) {
 		myListeners.remove(listener);
 	}
 
@@ -198,6 +192,7 @@ public final class Library {
 					file.setCached(true);
 					fileList.add((ZLPhysicalFile)file);
 				}
+				fireModelChangedEvent(Code.Dummy);
 			}
 		}
 		return fileList;
@@ -267,11 +262,15 @@ public final class Library {
 			searchResults.getBookSubTree(book, true);
 		}
 
-		fireModelChangedEvent(ChangeListener.Code.BookAdded);
+		fireModelChangedEvent(Code.BookAdded);
 	}
 
-	private void fireModelChangedEvent(ChangeListener.Code code) {
-		for (ChangeListener l : myListeners) {
+	private void fireModelChangedEvent(Code code) {
+		try {
+			Thread.sleep(100);
+		} catch (InterruptedException e) {
+		}
+		for (LibraryChangeListener l : myListeners) {
 			l.onLibraryChanged(code);
 		}
 	}
@@ -348,7 +347,7 @@ public final class Library {
 			}
 		}
 
-		fireModelChangedEvent(ChangeListener.Code.BookAdded);
+		fireModelChangedEvent(Code.BookAdded);
 
 		// Step 2: check if files corresponding to "existing" books really exists;
 		//         add books to library if yes (and reload book info if needed);
@@ -387,7 +386,7 @@ public final class Library {
 					}
 				} else {
 					myRootTree.removeBook(book);
-					fireModelChangedEvent(ChangeListener.Code.BookRemoved);
+					fireModelChangedEvent(Code.BookRemoved);
 					orphanedBooks.add(book);
 				}
 			}
@@ -438,8 +437,13 @@ public final class Library {
 			public void run() {
 				try {
 					build();
+				} catch (Throwable t) {
+					t.printStackTrace();
 				} finally {
-					setStatus(myStatusMask & ~STATUS_LOADING);
+					try {
+						setStatus(myStatusMask & ~STATUS_LOADING);
+					} catch (Throwable t) {
+					}
 				}
 			}
 		}.start();
@@ -465,8 +469,13 @@ public final class Library {
 			public void run() {
 				try {
 					searchBooks(pattern);
+				} catch (Throwable t) {
+					t.printStackTrace();
 				} finally {
-					setStatus(myStatusMask & ~STATUS_SEARCHING);
+					try {
+						setStatus(myStatusMask & ~STATUS_SEARCHING);
+					} catch (Throwable t) {
+					}
 				}
 			}
 		}.start();
@@ -474,7 +483,7 @@ public final class Library {
 
 	private void searchBooks(String pattern) {
 		if (pattern == null) {
-			fireModelChangedEvent(ChangeListener.Code.NotFound);
+			fireModelChangedEvent(Code.NotFound);
 			return;
 		}
 
@@ -482,7 +491,7 @@ public final class Library {
 
 		final SearchResultsTree oldSearchResults = (SearchResultsTree)getFirstLevelTree(ROOT_SEARCH_RESULTS);
 		if (oldSearchResults != null && pattern.equals(oldSearchResults.getPattern())) {
-			fireModelChangedEvent(ChangeListener.Code.Found);
+			fireModelChangedEvent(Code.Found);
 			return;
 		}
 		
@@ -495,15 +504,15 @@ public final class Library {
 							oldSearchResults.removeSelf();
 						}
 						newSearchResults = new SearchResultsTree(myRootTree, ROOT_SEARCH_RESULTS, pattern);
-						fireModelChangedEvent(ChangeListener.Code.Found);
+						fireModelChangedEvent(Code.Found);
 					}
 					newSearchResults.getBookSubTree(book, true);
-					fireModelChangedEvent(ChangeListener.Code.BookAdded);
+					fireModelChangedEvent(Code.BookAdded);
 				}
 			}
 		}
 		if (newSearchResults == null) {
-			fireModelChangedEvent(ChangeListener.Code.NotFound);
+			fireModelChangedEvent(Code.NotFound);
 		}
 	}
 
@@ -625,5 +634,12 @@ public final class Library {
 	public static String getAnnotation(ZLFile file) {
 		final FormatPlugin plugin = PluginCollection.Instance().getPlugin(file);
 		return plugin != null ? plugin.readAnnotation(file) : null;
+	}
+
+	public void onLibraryChanged(Code code) {
+		if (myLibraryClosed) {
+			System.err.println("throw");
+			throw new RuntimeException();
+		}
 	}
 }

@@ -44,7 +44,7 @@ import org.geometerplus.android.fbreader.FBReader;
 import org.geometerplus.android.fbreader.tree.BaseActivity;
 import org.geometerplus.android.fbreader.tree.ListAdapter;
 
-public class LibraryActivity extends BaseActivity implements MenuItem.OnMenuItemClickListener, View.OnCreateContextMenuListener, Library.ChangeListener {
+public class LibraryActivity extends BaseActivity implements MenuItem.OnMenuItemClickListener, View.OnCreateContextMenuListener, LibraryChangeListener {
 	public static final String SELECTED_BOOK_PATH_KEY = "SelectedBookPath";
 
 	private BooksDatabase myDatabase;
@@ -54,17 +54,16 @@ public class LibraryActivity extends BaseActivity implements MenuItem.OnMenuItem
 
 	@Override
 	public void onCreate(Bundle icicle) {
+		System.err.println("onCreate 0");
 		super.onCreate(icicle);
 
 		myDatabase = SQLiteBooksDatabase.Instance();
 		if (myDatabase == null) {
 			myDatabase = new SQLiteBooksDatabase(this, "LIBRARY");
 		}
-		if (myLibrary == null) {
-			myLibrary = new Library();
-			myLibrary.addChangeListener(this);
-			myLibrary.startBuild();
-		}
+		myLibrary = new Library();
+		myLibrary.addChangeListener(this);
+		myLibrary.startBuild();
 
 		final String selectedBookPath = getIntent().getStringExtra(SELECTED_BOOK_PATH_KEY);
 		mySelectedBook = null;
@@ -81,6 +80,14 @@ public class LibraryActivity extends BaseActivity implements MenuItem.OnMenuItem
 		getListView().setTextFilterEnabled(true);
 
 		getListView().setOnCreateContextMenuListener(this);
+		System.err.println("onCreate 1");
+	}
+
+	@Override
+	protected void onResume() {
+		super.onResume();
+		System.err.println("onResume");
+		setProgressBarIndeterminateVisibility(!myLibrary.isUpToDate());
 	}
 
 	@Override
@@ -90,8 +97,9 @@ public class LibraryActivity extends BaseActivity implements MenuItem.OnMenuItem
 
 	@Override
 	protected void onDestroy() {
+		System.err.println("onDestroy");
 		myLibrary.removeChangeListener(this);
-		myLibrary = null;
+		myLibrary.close();
 		super.onDestroy();
 	}
 
@@ -318,6 +326,8 @@ public class LibraryActivity extends BaseActivity implements MenuItem.OnMenuItem
 				switch (code) {
 					default:
 						getListAdapter().replaceAll(getCurrentTree().subTrees());
+						break;
+					case Dummy:
 						break;
 					case StatusChanged:
 						setProgressBarIndeterminateVisibility(!myLibrary.isUpToDate());
