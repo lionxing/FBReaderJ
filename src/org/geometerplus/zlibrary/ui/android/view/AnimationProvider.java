@@ -86,7 +86,7 @@ abstract class AnimationProvider {
 			return;
 		}
 
-		if (getPageToScrollTo(x, y) == ZLView.PageIndex.current) {
+		if (ZLView.PageIndex.current.equals(getPageToScrollTo(x, y))) {
 			return;
 		}
 
@@ -121,7 +121,7 @@ abstract class AnimationProvider {
 		}
 		myDrawInfos.clear();
 
-		if (getPageToScrollTo() == ZLView.PageIndex.previous) {
+		if (ZLView.PageIndex.previous.equals(getPageToScrollTo())) {
 			forward = !forward;
 		}
 
@@ -150,11 +150,11 @@ abstract class AnimationProvider {
 		switch (myDirection) {
 			case up:
 			case rightToLeft:
-				mySpeed = pageIndex == ZLView.PageIndex.next ? -15 : 15;
+				mySpeed = ZLView.PageIndex.next.equals(pageIndex) ? -15 : 15;
 				break;
 			case leftToRight:
 			case down:
-				mySpeed = pageIndex == ZLView.PageIndex.next ? 15 : -15;
+				mySpeed = ZLView.PageIndex.next.equals(pageIndex) ? 15 : -15;
 				break;
 		}
 		setupAnimatedScrollingStart(x, y);

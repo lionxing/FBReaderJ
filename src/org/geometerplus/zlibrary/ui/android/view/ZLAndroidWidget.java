@@ -135,7 +135,7 @@ public class ZLAndroidWidget extends View implements ZLViewWidget, View.OnLongCl
 				case AnimatedScrollingForward:
 				{
 					final ZLView.PageIndex index = animator.getPageToScrollTo();
-					myBitmapManager.shift(index == ZLView.PageIndex.next);
+					myBitmapManager.shift(ZLView.PageIndex.next.equals(index));
 					view.onScrollingFinished(index);
 					ZLApplication.Instance().onRepaintFinished();
 					break;
@@ -173,7 +173,7 @@ public class ZLAndroidWidget extends View implements ZLViewWidget, View.OnLongCl
 
 	public void startAnimatedScrolling(ZLView.PageIndex pageIndex, int x, int y, ZLView.Direction direction, int speed) {
 		final ZLView view = ZLApplication.Instance().getCurrentView();
-		if (pageIndex == ZLView.PageIndex.current || !view.canScroll(pageIndex)) {
+		if (ZLView.PageIndex.current.equals(pageIndex) || !view.canScroll(pageIndex)) {
 			return;
 		}
 		final AnimationProvider animator = getAnimationProvider();
@@ -186,7 +186,7 @@ public class ZLAndroidWidget extends View implements ZLViewWidget, View.OnLongCl
 
 	public void startAnimatedScrolling(ZLView.PageIndex pageIndex, ZLView.Direction direction, int speed) {
 		final ZLView view = ZLApplication.Instance().getCurrentView();
-		if (pageIndex == ZLView.PageIndex.current || !view.canScroll(pageIndex)) {
+		if (ZLView.PageIndex.current.equals(pageIndex) || !view.canScroll(pageIndex)) {
 			return;
 		}
 		final AnimationProvider animator = getAnimationProvider();
