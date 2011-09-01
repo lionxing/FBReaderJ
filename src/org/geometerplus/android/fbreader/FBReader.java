@@ -45,7 +45,7 @@ import org.geometerplus.fbreader.library.Book;
 
 import org.geometerplus.android.fbreader.library.SQLiteBooksDatabase;
 import org.geometerplus.android.fbreader.library.KillerCallback;
-import org.geometerplus.android.fbreader.api.PluginApi;
+import org.geometerplus.android.fbreader.api.*;
 
 import org.geometerplus.android.util.UIUtil;
 
@@ -239,10 +239,12 @@ public final class FBReader extends ZLAndroidActivity {
 		} catch (Throwable t) {
 		}
 		PopupPanel.restoreVisibilities(FBReaderApp.Instance());
+		ApiServerImplementation.sendEvent(this, ApiListener.EVENT_READ_MODE_OPENED);
 	}
 
 	@Override
 	public void onStop() {
+		ApiServerImplementation.sendEvent(this, ApiListener.EVENT_READ_MODE_CLOSED);
 		PopupPanel.removeAllWindows(FBReaderApp.Instance());
 		super.onStop();
 	}

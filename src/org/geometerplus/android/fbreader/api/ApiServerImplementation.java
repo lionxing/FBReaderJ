@@ -21,6 +21,9 @@ package org.geometerplus.android.fbreader.api;
 
 import java.util.*;
 
+import android.content.ContextWrapper;
+import android.content.Intent;
+
 import org.geometerplus.zlibrary.core.library.ZLibrary;
 import org.geometerplus.zlibrary.core.config.ZLConfig;
 
@@ -29,6 +32,13 @@ import org.geometerplus.zlibrary.text.view.*;
 import org.geometerplus.fbreader.fbreader.FBReaderApp;
 
 public class ApiServerImplementation extends ApiInterface.Stub implements Api, ApiMethods {
+	public static void sendEvent(ContextWrapper context, int event) {
+		context.sendBroadcast(
+			new Intent(ApiClientImplementation.ACTION_API_CALLBACK)
+				.putExtra(ApiClientImplementation.EVENT_CODE, event)
+		);
+	}
+
 	private final FBReaderApp myReader = (FBReaderApp)FBReaderApp.Instance();
 
 	private ApiObject.Error unsupportedMethodError(int method) {

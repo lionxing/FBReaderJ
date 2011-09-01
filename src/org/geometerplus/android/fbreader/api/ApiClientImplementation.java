@@ -16,6 +16,7 @@ public class ApiClientImplementation implements ServiceConnection, Api, ApiMetho
 
 	private static final String ACTION_API = "android.fbreader.action.API";
 	public static final String ACTION_API_CALLBACK = "android.fbreader.action.API_CALLBACK";
+	public static final String EVENT_CODE = "event.code";
 
 	private final Context myContext;
 	private ConnectionListener myListener;
@@ -27,8 +28,16 @@ public class ApiClientImplementation implements ServiceConnection, Api, ApiMetho
 	private final BroadcastReceiver myEventReceiver = new BroadcastReceiver() {
 		@Override
 		public void onReceive(Context context, Intent intent) {
-			if (myInterface == null) {
+			if (myInterface == null || myApiListeners.size() == 0) {
 				return;
+			}
+			final int code = intent.getIntExtra(EVENT_CODE, -1);
+			if (code != -1) {
+				synchronized (myApiListeners) {
+					for (ApiListener l : myApiListeners) {
+						l.onEvent(code);
+					}
+				}
 			}
 		}
 	};
