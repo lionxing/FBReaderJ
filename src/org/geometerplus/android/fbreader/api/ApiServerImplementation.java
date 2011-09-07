@@ -19,6 +19,10 @@
 
 package org.geometerplus.android.fbreader.api;
 
+import java.io.IOException;
+import java.io.InputStream;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.*;
 
 import android.content.ContextWrapper;
@@ -72,6 +76,8 @@ public class ApiServerImplementation extends ApiInterface.Stub implements Api, A
 					return ApiObject.envelope(getBookTitle());
 				case GET_BOOK_FILE_NAME:
 					return ApiObject.envelope(getBookFileName());
+				case GET_BOOK_HASH:
+					return ApiObject.envelope(getBookHash());
 				case GET_PARAGRAPHS_NUMBER:
 					return ApiObject.envelope(getParagraphsNumber());
 				case GET_ELEMENTS_NUMBER:
@@ -181,6 +187,32 @@ public class ApiServerImplementation extends ApiInterface.Stub implements Api, A
 	public String getBookFileName() {
 		// TODO: implement
 		return null;
+	}
+	
+	public String getBookHash() throws IOException, NoSuchAlgorithmException {
+		try {
+			MessageDigest hash = MessageDigest.getInstance("SHA-256");
+			
+			InputStream bookContents = myReader.Model.Book.File.getInputStream();
+			
+			byte[] buffer = new byte[2048];
+			int nread = 0;
+            while((nread = bookContents.read(buffer)) != -1){
+                hash.update(buffer, 0, nread);
+            }
+            
+            StringBuilder sb = new StringBuilder(64);
+            for (byte b : hash.digest()){
+              sb.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
+            }
+            return sb.toString();
+		}
+		catch (IOException e) {
+			return null;
+		}
+		catch (NoSuchAlgorithmException e) {
+			return null;
+		}
 	}
 
 	// page information

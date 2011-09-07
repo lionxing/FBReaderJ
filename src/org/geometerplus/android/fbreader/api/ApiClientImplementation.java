@@ -216,6 +216,10 @@ public class ApiClientImplementation implements ServiceConnection, Api, ApiMetho
 	public String getBookFileName() throws ApiException {
 		return requestString(GET_BOOK_FILE_NAME, EMPTY_PARAMETERS);
 	}
+	
+	public String getBookHash() throws ApiException {
+		return requestString(GET_BOOK_HASH, EMPTY_PARAMETERS);
+	}
 
 	public TextPosition getPageStart() throws ApiException {
 		return requestTextPosition(GET_PAGE_START, EMPTY_PARAMETERS);
