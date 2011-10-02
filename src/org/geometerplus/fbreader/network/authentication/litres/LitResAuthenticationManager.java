@@ -27,6 +27,7 @@ import org.geometerplus.zlibrary.core.util.ZLNetworkUtil;
 import org.geometerplus.zlibrary.core.network.ZLNetworkManager;
 import org.geometerplus.zlibrary.core.network.ZLNetworkException;
 import org.geometerplus.zlibrary.core.network.ZLNetworkRequest;
+import org.geometerplus.zlibrary.core.money.Money;
 
 import org.geometerplus.fbreader.network.*;
 import org.geometerplus.fbreader.network.opds.OPDSNetworkLink;
@@ -41,14 +42,14 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 	private final ZLBooleanOption myCanRebillOption;
 
 	private volatile String myInitializedDataSid;
-	private volatile String myAccount;
+	private volatile Money myAccount;
 	private final Map<String,NetworkBookItem> myPurchasedBookMap =
 		new HashMap<String,NetworkBookItem>();
 	private final List<NetworkBookItem> myPurchasedBookList =
 		new LinkedList<NetworkBookItem>();
 
 	public LitResAuthenticationManager(OPDSNetworkLink link) {
-		super(link, null);
+		super(link);
 
 		mySidOption = new ZLStringOption(link.getSiteName(), "sid", "");
 		myUserIdOption = new ZLStringOption(link.getSiteName(), "userId", "");
@@ -98,38 +99,34 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 			sid = mySidOption.getValue();
 		}
 
-		String url = Link.getUrl(UrlInfo.Type.SignIn);
-		if (url == null) {
-			throw new ZLNetworkException(NetworkException.ERROR_UNSUPPORTED_OPERATION);
-		}
-
-		final LitResLoginXMLReader xmlReader = new LitResLoginXMLReader(Link.getSiteName());
-
-		ZLNetworkException exception = null;
 		try {
+			final LitResLoginXMLReader xmlReader = new LitResLoginXMLReader(Link.getSiteName());
+			final Map<String,String> params = new HashMap<String,String>();
+			final String url = parseUrl(Link.getUrl(UrlInfo.Type.SignIn), params);
+			if (url == null) {
+				throw new ZLNetworkException(NetworkException.ERROR_UNSUPPORTED_OPERATION);
+			}
 			final LitResNetworkRequest request = new LitResNetworkRequest(url, xmlReader);
+			for (Map.Entry<String,String> entry : params.entrySet()) {
+				request.addPostParameter(entry.getKey(), entry.getValue());
+			}
 			request.addPostParameter("sid", sid);
 			ZLNetworkManager.Instance().perform(request);
-		} catch (ZLNetworkException e) {
-			exception = e;
-		}
-
-		synchronized (this) {
-			if (exception != null) {
-				if (NetworkException.ERROR_AUTHENTICATION_FAILED.equals(exception.getCode())) {
-					throw exception;
-				}
-				logOut(false);
-				return false;
-			}
 			initUser(UserNameOption.getValue(), xmlReader.Sid, xmlReader.UserId, xmlReader.CanRebill);
 			return true;
+		} catch (ZLNetworkException e) {
+			if (NetworkException.ERROR_AUTHENTICATION_FAILED.equals(e.getCode())) {
+				throw e;
+			}
+			logOut(false);
+			return false;
 		}
 	}
 
 	@Override
 	public void authorise(String password) throws ZLNetworkException {
-		String url = Link.getUrl(UrlInfo.Type.SignIn);
+		final Map<String,String> params = new HashMap<String,String>();
+		final String url = parseUrl(Link.getUrl(UrlInfo.Type.SignIn), params);
 		if (url == null) {
 			throw new ZLNetworkException(NetworkException.ERROR_UNSUPPORTED_OPERATION);
 		}
@@ -143,6 +140,9 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 		ZLNetworkException exception = null;
 		try {
 			final LitResNetworkRequest request = new LitResNetworkRequest(url, xmlReader);
+			for (Map.Entry<String,String> entry : params.entrySet()) {
+				request.addPostParameter(entry.getKey(), entry.getValue());
+			}
 			request.addPostParameter("login", login);
 			request.addPostParameter("pwd", password);
 			ZLNetworkManager.Instance().perform(request);
@@ -175,20 +175,6 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 		final String url = ZLNetworkUtil.appendParameter(reference.Url, "sid", sid);
 		return new DecoratedBookUrlInfo(reference, url);
 	}
-
-
-	@Override
-	public String currentUserName() {
-		final String value;
-		synchronized (this) {
-			value = UserNameOption.getValue();
-		}
-		if (value.length() == 0) {
-			return null;
-		}
-		return value;
-	}
-
 
 	@Override
 	public synchronized boolean needPurchase(NetworkBookItem book) {
@@ -223,7 +209,7 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 
 		synchronized (this) {
 			if (xmlReader.Account != null) {
-				myAccount = BookBuyUrlInfo.price(xmlReader.Account, "RUB");
+				myAccount = new Money(xmlReader.Account, "RUB");
 			}
 			if (exception != null) {
 				final String code = exception.getCode();
@@ -240,11 +226,15 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 			}
 			myPurchasedBookMap.put(book.Id, book);
 			myPurchasedBookList.add(0, book);
+			final BasketItem basket = book.Link.getBasketItem();
+			if (basket != null) {
+				basket.remove(book);
+			}
 		}
 	}
 
 	@Override
-	public String topupLink() {
+	public String topupLink(Money sum) {
 		final String sid;
 		synchronized (this) {
 			sid = mySidOption.getValue();
@@ -252,15 +242,17 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 		if (sid.length() == 0) {
 			return null;
 		}
-		final String url = Link.getUrl(UrlInfo.Type.TopUp);
+		String url = Link.getUrl(UrlInfo.Type.TopUp);
 		if (url == null) {
 			return null;
 		}
-		return ZLNetworkUtil.appendParameter(url, "sid", sid);
+		url = ZLNetworkUtil.appendParameter(url, "sid", sid);
+		url = ZLNetworkUtil.appendParameter(url, "summ", String.valueOf(sum.Amount));
+		return url;
 	}
 
 	@Override
-	public synchronized String currentAccount() {
+	public synchronized Money currentAccount() {
 		return myAccount;
 	}
 
@@ -403,7 +395,7 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 
 	private void loadAccountOnSuccess(LitResNetworkRequest accountRequest) {
 		LitResPurchaseXMLReader reader = (LitResPurchaseXMLReader)accountRequest.Reader;
-		myAccount = BookBuyUrlInfo.price(reader.Account, "RUB");
+		myAccount = new Money(reader.Account, "RUB");
 	}
 
 	@Override
@@ -430,5 +422,22 @@ public class LitResAuthenticationManager extends NetworkAuthenticationManager {
 		map.put("litres:canRebill", myCanRebillOption.getValue() ? "true" : "false");
 		map.put("litres:sid", mySidOption.getValue());
 		return map;
+	}
+
+	private static String parseUrl(String url, Map<String,String> params) {
+		if (url == null) {
+			return null;
+		}
+		final String[] parts = url.split("\\?");
+		if (parts.length != 2) {
+			return url;
+		}
+		for (String s : parts[1].split("&")) {
+			final String[] pair = s.split("=");
+			if (pair.length == 2) {
+				params.put(pair[0], pair[1]);
+			}
+		}
+		return parts[0];
 	}
 }

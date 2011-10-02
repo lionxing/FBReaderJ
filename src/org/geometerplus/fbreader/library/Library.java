@@ -25,7 +25,6 @@ import java.util.*;
 
 import org.geometerplus.zlibrary.core.filesystem.*;
 import org.geometerplus.zlibrary.core.image.ZLImage;
-import org.geometerplus.zlibrary.core.util.ZLMiscUtil;
 import org.geometerplus.zlibrary.core.resources.ZLResource;
 
 import org.geometerplus.fbreader.tree.FBTree;
@@ -46,7 +45,7 @@ public final class Library {
 		void onLibraryChanged(Code code);
 	}
 
-	public static final String ROOT_SEARCH_RESULTS = "searchResults";
+	public static final String ROOT_FOUND = "found";
 	public static final String ROOT_FAVORITES = "favorites";
 	public static final String ROOT_RECENT = "recent";
 	public static final String ROOT_BY_AUTHOR = "byAuthor";
@@ -54,6 +53,14 @@ public final class Library {
 	public static final String ROOT_BY_SERIES = "bySeries";
 	public static final String ROOT_BY_TAG = "byTag";
 	public static final String ROOT_FILE_TREE = "fileTree";
+
+	private static Library ourInstance;
+	public static Library Instance() {
+		if (ourInstance == null) {
+			ourInstance = new Library();
+		}
+		return ourInstance;
+	}
 
 	public static ZLResource resource() {
 		return ZLResource.resource("library");
@@ -63,7 +70,7 @@ public final class Library {
 	private final RootTree myRootTree = new RootTree(this);
 	private boolean myDoGroupTitlesByFirstLetter;
 
-	private final List<ChangeListener> myListeners = new LinkedList<ChangeListener>();
+	private final List<ChangeListener> myListeners = Collections.synchronizedList(new LinkedList<ChangeListener>());
 
 	private final static int STATUS_LOADING = 1;
 	private final static int STATUS_SEARCHING = 2;
@@ -74,7 +81,7 @@ public final class Library {
 		fireModelChangedEvent(ChangeListener.Code.StatusChanged);
 	}
 
-	public Library() {
+	private Library() {
 		new FavoritesTree(myRootTree, ROOT_FAVORITES);
 		new FirstLevelTree(myRootTree, ROOT_RECENT);
 		new FirstLevelTree(myRootTree, ROOT_BY_AUTHOR);
@@ -91,11 +98,11 @@ public final class Library {
 		return (FirstLevelTree)myRootTree.getSubTree(key);
 	}
 
-	public synchronized void addChangeListener(ChangeListener listener) {
+	public void addChangeListener(ChangeListener listener) {
 		myListeners.add(listener);
 	}
 
-	public synchronized void removeChangeListener(ChangeListener listener) {
+	public void removeChangeListener(ChangeListener listener) {
 		myListeners.remove(listener);
 	}
 
@@ -130,19 +137,6 @@ public final class Library {
 		return ZLResourceFile.createResourceFile("data/help/MiniHelp.en.fb2");
 	}
 
-	private static Book getBook(ZLFile bookFile, FileInfoSet fileInfos, Map<Long,Book> saved, boolean doReadMetaInfo) {
-		Book book = saved.remove(fileInfos.getId(bookFile));
-		if (book == null) {
-			doReadMetaInfo = true;
-			book = new Book(bookFile);
-		}
-
-		if (doReadMetaInfo && !book.readMetaInfo()) {
-			return null;
-		}
-		return book;
-	}
-
 	private void collectBooks(
 		ZLFile file, FileInfoSet fileInfos,
 		Map<Long,Book> savedBooksByFileId, Map<Long,Book> orphanedBooksByFileId,
@@ -157,6 +151,7 @@ public final class Library {
 		Book book = orphanedBooksByFileId.get(fileId);
 		if (book != null && (!doReadMetaInfo || book.readMetaInfo())) {
 			addBookToLibrary(book);
+			fireModelChangedEvent(ChangeListener.Code.BookAdded);
 			newBooks.add(book);
 			return;
 		}
@@ -164,6 +159,7 @@ public final class Library {
 		book = new Book(file);
 		if (book.readMetaInfo()) {
 			addBookToLibrary(book);
+			fireModelChangedEvent(ChangeListener.Code.BookAdded);
 			newBooks.add(book);
 			return;
 		}
@@ -261,18 +257,18 @@ public final class Library {
 			getTagTree(t).getBookSubTree(book, true);
 		}
 
-		final SearchResultsTree searchResults =
-			(SearchResultsTree)getFirstLevelTree(ROOT_SEARCH_RESULTS);
-		if (searchResults != null && book.matches(searchResults.getPattern())) {
-			searchResults.getBookSubTree(book, true);
+		final SearchResultsTree found =
+			(SearchResultsTree)getFirstLevelTree(ROOT_FOUND);
+		if (found != null && book.matches(found.getPattern())) {
+			found.getBookSubTree(book, true);
 		}
-
-		fireModelChangedEvent(ChangeListener.Code.BookAdded);
 	}
 
 	private void fireModelChangedEvent(ChangeListener.Code code) {
-		for (ChangeListener l : myListeners) {
-			l.onLibraryChanged(code);
+		synchronized (myListeners) {
+			for (ChangeListener l : myListeners) {
+				l.onLibraryChanged(code);
+			}
 		}
 	}
 
@@ -302,12 +298,13 @@ public final class Library {
 		myBooks.remove(book);
 		refreshInTree(ROOT_FAVORITES, book);
 		refreshInTree(ROOT_RECENT, book);
-		removeFromTree(ROOT_SEARCH_RESULTS, book);
+		removeFromTree(ROOT_FOUND, book);
 		removeFromTree(ROOT_BY_TITLE, book);
 		removeFromTree(ROOT_BY_SERIES, book);
 		removeFromTree(ROOT_BY_AUTHOR, book);
 		removeFromTree(ROOT_BY_TAG, book);
 		addBookToLibrary(book);
+		fireModelChangedEvent(ChangeListener.Code.BookAdded);
 	}
 
 	private void build() {
@@ -366,6 +363,7 @@ public final class Library {
 		}
 
 		final Set<Book> orphanedBooks = new HashSet<Book>();
+		int count = 0;
 		for (Book book : savedBooksByFileId.values()) {
 			synchronized (this) {
 				if (book.File.exists()) {
@@ -384,6 +382,9 @@ public final class Library {
 					}
 					if (doAdd) {
 						addBookToLibrary(book);
+						if (++count % 16 == 0) {
+							fireModelChangedEvent(ChangeListener.Code.BookAdded);
+						}
 					}
 				} else {
 					myRootTree.removeBook(book, true);
@@ -392,6 +393,7 @@ public final class Library {
 				}
 			}
 		}
+		fireModelChangedEvent(ChangeListener.Code.BookAdded);
 		db.setExistingFlag(orphanedBooks, false);
 
 		// Step 3: collect books from physical files; add new, update already added,
@@ -418,6 +420,7 @@ public final class Library {
 			helpBook.readMetaInfo();
 		}
 		addBookToLibrary(helpBook);
+		fireModelChangedEvent(ChangeListener.Code.BookAdded);
 
 		// Step 5: save changes into database
 		fileInfos.save();
@@ -432,9 +435,17 @@ public final class Library {
 		db.setExistingFlag(newBooks, true);
 	}
 
-	public void startBuild() {
+	private volatile boolean myBuildStarted = false;
+
+	public synchronized void startBuild() {
+		if (myBuildStarted) {
+			fireModelChangedEvent(ChangeListener.Code.StatusChanged);
+			return;
+		}
+		myBuildStarted = true;
+
 		setStatus(myStatusMask | STATUS_LOADING);
-		new Thread("Library.build") {
+		final Thread builder = new Thread("Library.build") {
 			public void run() {
 				try {
 					build();
@@ -442,7 +453,9 @@ public final class Library {
 					setStatus(myStatusMask & ~STATUS_LOADING);
 				}
 			}
-		}.start();
+		};
+		builder.setPriority((Thread.MIN_PRIORITY + Thread.NORM_PRIORITY) / 2);
+		builder.start();
 	}
 
 	public boolean isUpToDate() {
@@ -461,7 +474,7 @@ public final class Library {
 
 	public void startBookSearch(final String pattern) {
 		setStatus(myStatusMask | STATUS_SEARCHING);
-		new Thread("Library.searchBooks") {
+		final Thread searcher = new Thread("Library.searchBooks") {
 			public void run() {
 				try {
 					searchBooks(pattern);
@@ -469,7 +482,9 @@ public final class Library {
 					setStatus(myStatusMask & ~STATUS_SEARCHING);
 				}
 			}
-		}.start();
+		};
+		searcher.setPriority((Thread.MIN_PRIORITY + Thread.NORM_PRIORITY) / 2);
+		searcher.start();
 	}
 
 	private void searchBooks(String pattern) {
@@ -480,7 +495,7 @@ public final class Library {
 
 		pattern = pattern.toLowerCase();
 
-		final SearchResultsTree oldSearchResults = (SearchResultsTree)getFirstLevelTree(ROOT_SEARCH_RESULTS);
+		final SearchResultsTree oldSearchResults = (SearchResultsTree)getFirstLevelTree(ROOT_FOUND);
 		if (oldSearchResults != null && pattern.equals(oldSearchResults.getPattern())) {
 			fireModelChangedEvent(ChangeListener.Code.Found);
 			return;
@@ -494,7 +509,7 @@ public final class Library {
 						if (oldSearchResults != null) {
 							oldSearchResults.removeSelf();
 						}
-						newSearchResults = new SearchResultsTree(myRootTree, ROOT_SEARCH_RESULTS, pattern);
+						newSearchResults = new SearchResultsTree(myRootTree, ROOT_FOUND, pattern);
 						fireModelChangedEvent(ChangeListener.Code.Found);
 					}
 					newSearchResults.getBookSubTree(book, true);
@@ -544,6 +559,7 @@ public final class Library {
 	public void removeBookFromFavorites(Book book) {
 		if (getFirstLevelTree(ROOT_FAVORITES).removeBook(book, false)) {
 			BooksDatabase.Instance().removeFromFavorites(book.getId());
+			fireModelChangedEvent(ChangeListener.Code.BookRemoved);
 		}
 	}
 

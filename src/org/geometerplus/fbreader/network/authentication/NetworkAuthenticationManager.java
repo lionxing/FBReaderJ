@@ -23,16 +23,17 @@ import java.util.*;
 
 import org.geometerplus.zlibrary.core.options.ZLStringOption;
 import org.geometerplus.zlibrary.core.network.ZLNetworkException;
+import org.geometerplus.zlibrary.core.money.Money;
 
 import org.geometerplus.fbreader.network.*;
 import org.geometerplus.fbreader.network.opds.OPDSNetworkLink;
 import org.geometerplus.fbreader.network.authentication.litres.LitResAuthenticationManager;
-import org.geometerplus.fbreader.network.urlInfo.BookUrlInfo;
+import org.geometerplus.fbreader.network.urlInfo.*;
 
 public abstract class NetworkAuthenticationManager {
 	private static final HashMap<String, NetworkAuthenticationManager> ourManagers = new HashMap<String, NetworkAuthenticationManager>();
 
-	public static NetworkAuthenticationManager createManager(INetworkLink link, String sslCertificate, Class<? extends NetworkAuthenticationManager> managerClass) {
+	public static NetworkAuthenticationManager createManager(INetworkLink link, Class<? extends NetworkAuthenticationManager> managerClass) {
 		NetworkAuthenticationManager mgr = ourManagers.get(link.getSiteName());
 		if (mgr == null) {
 			if (managerClass == LitResAuthenticationManager.class) {
@@ -48,12 +49,10 @@ public abstract class NetworkAuthenticationManager {
 
 	public final INetworkLink Link;
 	public final ZLStringOption UserNameOption;
-	public final String SSLCertificate;
 
-	protected NetworkAuthenticationManager(INetworkLink link, String sslCertificate) {
+	protected NetworkAuthenticationManager(INetworkLink link) {
 		Link = link;
 		UserNameOption = new ZLStringOption(link.getSiteName(), "userName", "");
-		SSLCertificate = sslCertificate;
 	}
 
 	/*
@@ -71,11 +70,6 @@ public abstract class NetworkAuthenticationManager {
 		}
 		return true;
 	}
-
-	/*
-	 * Account specific methods (can be called only if authorised!!!)
-	 */
-	public abstract String currentUserName();
 
 	public boolean needsInitialization() {
 		return false;
@@ -98,21 +92,26 @@ public abstract class NetworkAuthenticationManager {
 		return Collections.emptyList();
 	}
 
-	public String currentAccount() {
+	public Money currentAccount() {
 		return null;
 	}
-
-	//public abstract ZLNetworkSSLCertificate certificate();
 
 	/*
 	 * topup account
 	 */
 
-	public String topupLink() {
+	public String topupLink(Money sum) {
 		return null;
 	}
 	public Map<String,String> getTopupData() {
 		return Collections.emptyMap();
+	}
+
+	/*
+     * sign up
+	 */
+	public Map<String,String> getAccountData() {
+		return Collections.singletonMap("signupUrl", Link.getUrl(UrlInfo.Type.SignUp));
 	}
 
 	/*
