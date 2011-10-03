@@ -112,7 +112,7 @@ public class ApiServerImplementation extends ApiInterface.Stub implements Api, A
 			}
 		} catch (Throwable e) {
 			return new ApiObject.Error("Exception in method " + method + ": " + e);
-		} 
+		}
 	}
 
 	public List<ApiObject> requestList(int method, ApiObject[] parameters) {
@@ -131,7 +131,7 @@ public class ApiServerImplementation extends ApiInterface.Stub implements Api, A
 			}
 		} catch (Throwable e) {
 			return Collections.<ApiObject>singletonList(exceptionInMethodError(method, e));
-		} 
+		}
 	}
 
 	private Map<ApiObject,ApiObject> errorMap(ApiObject.Error error) {
@@ -146,7 +146,7 @@ public class ApiServerImplementation extends ApiInterface.Stub implements Api, A
 			}
 		} catch (Throwable e) {
 			return errorMap(exceptionInMethodError(method, e));
-		} 
+		}
 	}
 
 	// information about fbreader
@@ -188,19 +188,19 @@ public class ApiServerImplementation extends ApiInterface.Stub implements Api, A
 		// TODO: implement
 		return null;
 	}
-	
+
 	public String getBookHash() throws IOException, NoSuchAlgorithmException {
 		try {
 			MessageDigest hash = MessageDigest.getInstance("SHA-256");
-			
+
 			InputStream bookContents = myReader.Model.Book.File.getInputStream();
-			
+
 			byte[] buffer = new byte[2048];
 			int nread = 0;
             while((nread = bookContents.read(buffer)) != -1){
                 hash.update(buffer, 0, nread);
             }
-            
+
             StringBuilder sb = new StringBuilder(64);
             for (byte b : hash.digest()){
               sb.append(Integer.toString((b & 0xff) + 0x100, 16).substring(1));
