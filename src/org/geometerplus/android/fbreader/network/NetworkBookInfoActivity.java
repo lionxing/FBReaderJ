@@ -77,6 +77,8 @@ public class NetworkBookInfoActivity extends Activity implements NetworkLibrary.
 	protected void onResume() {
 		super.onResume();
 
+		NetworkLibrary.Instance().fireModelChangedEvent(NetworkLibrary.ChangeListener.Code.SomeCode);
+
 		if (!myInitializerStarted) {
 			UIUtil.wait("loadingNetworkBookInfo", myInitializer, this);
 		}
@@ -350,7 +352,7 @@ public class NetworkBookInfoActivity extends Activity implements NetworkLibrary.
 				R.id.network_book_button2,
 				R.id.network_book_button3,
 		};
-		final List<NetworkBookActions.NBAction> actions = NetworkBookActions.getContextMenuActions(this, myBook, myConnection);
+		final List<NetworkBookActions.NBAction> actions = NetworkBookActions.getContextMenuActions(this, myTree, myConnection);
 
 		final boolean skipSecondButton =
 			actions.size() < buttons.length &&

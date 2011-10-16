@@ -66,7 +66,9 @@ public abstract class Util implements UserRegistrationConstants {
 	static Intent authorizationIntent(INetworkLink link, Uri id) {
 		final Intent intent = new Intent(AUTHORIZATION_ACTION, id);
 		intent.putExtra(CATALOG_URL, link.getUrl(UrlInfo.Type.Catalog));
+		intent.putExtra(SIGNIN_URL, link.getUrl(UrlInfo.Type.SignIn));
 		intent.putExtra(SIGNUP_URL, link.getUrl(UrlInfo.Type.SignUp));
+		intent.putExtra(RECOVER_PASSWORD_URL, link.getUrl(UrlInfo.Type.RecoverPassword));
 		return intent;
 	}
 
@@ -93,7 +95,7 @@ public abstract class Util implements UserRegistrationConstants {
 
 		final Intent intent = intentByLink(new Intent(activity, AuthenticationActivity.class), link);
 		AuthenticationActivity.registerRunnable(intent, onSuccess);
-		intent.putExtra(AuthenticationActivity.USERNAME_KEY, mgr.UserNameOption.getValue());
+		intent.putExtra(AuthenticationActivity.USERNAME_KEY, mgr.getUserName());
 		intent.putExtra(AuthenticationActivity.SCHEME_KEY, "https");
 		intent.putExtra(AuthenticationActivity.CUSTOM_AUTH_KEY, true);
 		activity.startActivity(intent);
