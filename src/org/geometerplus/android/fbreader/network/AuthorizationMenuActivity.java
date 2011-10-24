@@ -21,6 +21,7 @@ package org.geometerplus.android.fbreader.network;
 
 import java.util.*;
 
+import android.app.Activity;
 import android.content.*;
 import android.net.Uri;
 import android.view.*;
@@ -31,16 +32,20 @@ import org.geometerplus.fbreader.network.NetworkLibrary;
 import org.geometerplus.fbreader.network.urlInfo.UrlInfo;
 import org.geometerplus.fbreader.network.authentication.NetworkAuthenticationManager;
 
-import org.geometerplus.zlibrary.ui.android.R;
-
 import org.geometerplus.android.util.PackageUtil;
 
 import org.geometerplus.android.fbreader.api.PluginApi;
 
-public class AccountMenuActivity extends MenuActivity {
+public class AuthorizationMenuActivity extends MenuActivity {
 	public static void runMenu(Context context, INetworkLink link) {
 		context.startActivity(
-			Util.intentByLink(new Intent(context, AccountMenuActivity.class), link)
+			Util.intentByLink(new Intent(context, AuthorizationMenuActivity.class), link)
+		);
+	}
+
+	public static void runMenu(Activity activity, INetworkLink link, int code) {
+		activity.startActivityForResult(
+			Util.intentByLink(new Intent(activity, AuthorizationMenuActivity.class), link), code
 		);
 	}
 
@@ -48,7 +53,7 @@ public class AccountMenuActivity extends MenuActivity {
 
 	@Override
 	protected void init() {
-		setTitle(NetworkLibrary.resource().getResource("accountTitle").getValue());
+		setTitle(NetworkLibrary.resource().getResource("authorizationMenuTitle").getValue());
 		final String url = getIntent().getData().toString();
 		myLink = NetworkLibrary.Instance().getLinkByUrl(url);
 
@@ -63,7 +68,7 @@ public class AccountMenuActivity extends MenuActivity {
 
 	@Override
 	protected String getAction() {
-		return "android.fbreader.action.network.ACCOUNT";
+		return Util.AUTHORIZATION_ACTION;
 	}
 
 	@Override
@@ -71,19 +76,10 @@ public class AccountMenuActivity extends MenuActivity {
 		try {
 			final NetworkAuthenticationManager mgr = myLink.authenticationManager();
 			if (info.getId().toString().endsWith("/signIn")) {
-				Util.runAuthenticationDialog(AccountMenuActivity.this, myLink, new Runnable() {
-					public void run() {
-						//runOnUiThread(buyDialogRunnable);
-					}
-				});
+				Util.runAuthenticationDialog(AuthorizationMenuActivity.this, myLink, null);
 			} else {
-				final Intent intent = new Intent(getAction(), info.getId());
-				if (mgr != null) {
-					for (Map.Entry<String,String> entry : mgr.getAccountData().entrySet()) {
-						intent.putExtra(entry.getKey(), entry.getValue());
-					}
-				}
-				if (PackageUtil.canBeStarted(AccountMenuActivity.this, intent, true)) {
+				final Intent intent = Util.authorizationIntent(myLink, info.getId());
+				if (PackageUtil.canBeStarted(AuthorizationMenuActivity.this, intent, true)) {
 					startActivity(intent);
 				}
 			}

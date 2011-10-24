@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Geometer Plus <contact@geometerplus.com>
+ * Copyright (C) 2009-2011 Geometer Plus <contact@geometerplus.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,16 +17,14 @@
  * 02110-1301, USA.
  */
 
-package org.geometerplus.android.fbreader.network;
+package org.geometerplus.fbreader.tips;
 
-public interface UserRegistrationConstants {
-	String CATALOG_URL = "catalogUrl";
-	String SIGNIN_URL = "signinUrl";
-	String SIGNUP_URL = "signupUrl";
-	String RECOVER_PASSWORD_URL = "recoverPasswordUrl";
-
-	String USER_REGISTRATION_USERNAME = "userName";
-	String USER_REGISTRATION_PASSWORD = "password";
-	String USER_REGISTRATION_EMAIL = "eMail";
-	String USER_REGISTRATION_LITRES_SID = "litres:sid";
+public class Tip {
+	public final CharSequence Title;
+	public final CharSequence Content;
+	
+	Tip(CharSequence title, CharSequence content) {
+		Title = title;
+		Content = content;
+	}
 }

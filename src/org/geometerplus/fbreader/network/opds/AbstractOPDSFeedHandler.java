@@ -17,17 +17,22 @@
  * 02110-1301, USA.
  */
 
-package org.geometerplus.android.fbreader.network;
+package org.geometerplus.fbreader.network.opds;
 
-import android.content.BroadcastReceiver;
-import android.content.Context;
-import android.content.Intent;
+import org.geometerplus.zlibrary.core.xml.ZLStringMap;
 
-import org.geometerplus.fbreader.network.NetworkLibrary;
+import org.geometerplus.fbreader.network.atom.ATOMFeedHandler;
 
-public class BookDownloaderCallback extends BroadcastReceiver {
-	@Override
-	public void onReceive(Context context, Intent intent) {
-		NetworkLibrary.Instance().fireModelChangedEvent(NetworkLibrary.ChangeListener.Code.SomeCode);
+abstract class AbstractOPDSFeedHandler implements ATOMFeedHandler<OPDSFeedMetadata,OPDSEntry>, OPDSConstants {
+	public OPDSFeedMetadata createFeed(ZLStringMap attributes) {
+		return new OPDSFeedMetadata(attributes);
+	}
+
+	public OPDSEntry createEntry(ZLStringMap attributes) {
+		return new OPDSEntry(attributes);
+	}
+
+	public OPDSLink createLink(ZLStringMap attributes) {
+		return new OPDSLink(attributes);
 	}
 }
