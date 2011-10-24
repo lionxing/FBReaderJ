@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2010-2011 Geometer Plus <contact@geometerplus.com>
+ * Copyright (C) 2009-2011 Geometer Plus <contact@geometerplus.com>
  *
  * This program is free software; you can redistribute it and/or modify
  * it under the terms of the GNU General Public License as published by
@@ -17,22 +17,20 @@
  * 02110-1301, USA.
  */
 
-package org.geometerplus.fbreader.network.atom;
+package org.geometerplus.fbreader.tips;
 
-import org.geometerplus.zlibrary.core.xml.ZLStringMap;
+import java.util.*;
 
-public interface ATOMFeedHandler<MetadataType extends ATOMFeedMetadata,EntryType extends ATOMEntry> {
-	void processFeedStart();
+import org.geometerplus.zlibrary.core.filesystem.ZLFile;
 
-	// returns true iff reading process should be interrupted
-	boolean processFeedMetadata(MetadataType feed, boolean beforeEntries);
+import org.geometerplus.fbreader.network.atom.*;
 
-	// returns true iff reading process should be interrupted
-	boolean processFeedEntry(EntryType entry);
+class TipsFeedHandler extends AbstractATOMFeedHandler {
+	final List<Tip> Tips = new LinkedList<Tip>();
 
-	void processFeedEnd();
-
-	MetadataType createFeed(ZLStringMap attributes);
-	EntryType createEntry(ZLStringMap attributes);
-	ATOMLink createLink(ZLStringMap attributes);
+	@Override
+	public boolean processFeedEntry(ATOMEntry entry) {
+		Tips.add(new Tip(entry.Title, entry.Content));
+		return false;
+	}
 }
