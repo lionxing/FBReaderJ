@@ -25,34 +25,32 @@ import org.geometerplus.zlibrary.core.xml.ZLStringMap;
 import org.geometerplus.zlibrary.core.xml.ZLXMLReaderAdapter;
 import org.geometerplus.zlibrary.core.filesystem.*;
 
-final class ZLTreeResource extends ZLResource {
+abstract class ZLTreeResource extends ZLResource {
 	static ZLTreeResource ourRoot;
 
     private static long ourTimeStamp = 0;
     private static String ourLanguage = null;
     private static String ourCountry = null;
 
-	private boolean myHasValue;
-	private	String myValue;
 	private HashMap<String,ZLTreeResource> myChildren;
-	
+
 	public static void buildTree() {
 		if (ourRoot == null) {
-			ourRoot = new ZLTreeResource("", null);
+			ourRoot = new ZLFixedResource("", null);
 			ourLanguage = "en";
 			ourCountry = "UK";
 			loadData();
 		}
 	}
 
-    private static void updateLanguage() {
+    protected static void updateLanguage() {
         final long timeStamp = System.currentTimeMillis();
         if (timeStamp > ourTimeStamp + 1000) {
-            synchronized (ourRoot) { 
+            synchronized (ourRoot) {
                 if (timeStamp > ourTimeStamp + 1000) {
 					ourTimeStamp = timeStamp;
-        			final String language = Locale.getDefault().getLanguage();
-        			final String country = Locale.getDefault().getCountry();
+					final String language = Locale.getDefault().getLanguage();
+					final String country = Locale.getDefault().getCountry();
 					if ((language != null && !language.equals(ourLanguage)) ||
 						(country != null && !country.equals(ourCountry))) {
 						ourLanguage = language;
@@ -63,7 +61,7 @@ final class ZLTreeResource extends ZLResource {
 			}
 		}
     }
-	
+
 	private static void loadData(ResourceTreeReader reader, String fileName) {
 		reader.readDocument(ourRoot, ZLResourceFile.createResourceFile("resources/zlibrary/" + fileName));
 		reader.readDocument(ourRoot, ZLResourceFile.createResourceFile("resources/application/" + fileName));
@@ -75,25 +73,11 @@ final class ZLTreeResource extends ZLResource {
 		loadData(reader, ourLanguage + "_" + ourCountry + ".xml");
 	}
 
-	private	ZLTreeResource(String name, String value) {
+	protected ZLTreeResource(String name) {
 		super(name);
-		setValue(value);
-	}
-	
-	private void setValue(String value) {
-		myHasValue = value != null;
-		myValue = value;
-	}
-	
-	public boolean hasValue() {
-		return myHasValue;
-	}
-	
-	public String getValue() {
-		updateLanguage();
-		return myHasValue ? myValue : ZLMissingResource.Value;
 	}
 
+	@Override
 	public ZLResource getResource(String key) {
 		final HashMap<String,ZLTreeResource> children = myChildren;
 		if (children != null) {
@@ -104,11 +88,11 @@ final class ZLTreeResource extends ZLResource {
 		}
 		return ZLMissingResource.Instance;
 	}
-		
+
 	private static class ResourceTreeReader extends ZLXMLReaderAdapter {
-		private static final String NODE = "node"; 
+		private static final String NODE = "node";
 		private final ArrayList<ZLTreeResource> myStack = new ArrayList<ZLTreeResource>();
-		
+
 		public void readDocument(ZLTreeResource root, ZLFile file) {
 			myStack.clear();
 			myStack.add(root);
@@ -124,10 +108,11 @@ final class ZLTreeResource extends ZLResource {
 		public boolean startElementHandler(String tag, ZLStringMap attributes) {
 			final ArrayList<ZLTreeResource> stack = myStack;
 			if (!stack.isEmpty() && (NODE.equals(tag))) {
-				String name = attributes.getValue("name");
+				final String name = attributes.getValue("name");
 				if (name != null) {
-					String value = attributes.getValue("value");
-					ZLTreeResource peek = stack.get(stack.size() - 1);
+					final String value = attributes.getValue("value");
+					final String condition = attributes.getValue("condition");
+					final ZLTreeResource peek = stack.get(stack.size() - 1);
 					ZLTreeResource node;
 					HashMap<String,ZLTreeResource> children = peek.myChildren;
 					if (children == null) {
@@ -137,12 +122,23 @@ final class ZLTreeResource extends ZLResource {
 					} else {
 						node = children.get(name);
 					}
-					if (node == null) {
-						node = new ZLTreeResource(name, value);
-						children.put(name, node);
+					if (condition == null) {
+						if (node instanceof ZLFixedResource) {
+							if (value != null) {
+								((ZLFixedResource)node).setValue(value);
+							}
+						} else {
+							node = new ZLFixedResource(name, value);
+							children.put(name, node);
+						}
 					} else {
-						if (value != null) {
-							node.setValue(value);
+						if (node instanceof ZLConditionalResource) {
+							if (value != null) {
+								((ZLConditionalResource)node).addValue(condition, value);
+							}
+						} else {
+							node = new ZLConditionalResource(name, condition, value);
+							children.put(name, node);
 						}
 					}
 					stack.add(node);

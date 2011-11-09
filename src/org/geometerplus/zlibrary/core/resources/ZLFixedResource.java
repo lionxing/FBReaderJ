@@ -19,23 +19,23 @@
 
 package org.geometerplus.zlibrary.core.resources;
 
-import java.util.LinkedHashMap;
+final class ZLFixedResource extends ZLTreeResource {
+	private boolean myHasValue;
+	private	String myValue;
 
-final class ZLConditionalResource extends ZLTreeResource {
-	private	LinkedHashMap<String,String> myValues = new LinkedHashMap<String,String>();
-
-	private	ZLConditionalResource(String name, String condition, String value) {
+	ZLFixedResource(String name, String value) {
 		super(name);
-		addValue(condition, value);
+		setValue(value);
 	}
 
-	private void addValue(String condition, String value) {
-		myValues.put(condition, value);
+	void setValue(String value) {
+		myHasValue = value != null;
+		myValue = value;
 	}
 
 	@Override
 	public boolean hasValue() {
-		return true;
+		return myHasValue;
 	}
 
 	@Override
