@@ -96,8 +96,18 @@
 		<node name="topupSummary" value="Текущий счёт: %s"/>
 		<node name="basket" value="Корзина"/>
 		<node name="basketSummaryEmpty" value="Пустая корзина"/>
-		<node name="basketSummaryCountOnly" value="Книг: %0"/>
-		<node name="basketSummary" value="Книг: %0, на сумму %1"/>
+		<node name="basketSummaryCountOnly" condition="range 11 19" value="%0 книг"/>
+		<node name="basketSummaryCountOnly" condition="mod 1 10" value="%0 книгa"/>
+		<node name="basketSummaryCountOnly" condition="mod 2 10" value="%0 книги"/>
+		<node name="basketSummaryCountOnly" condition="mod 3 10" value="%0 книги"/>
+		<node name="basketSummaryCountOnly" condition="mod 4 10" value="%0 книги"/>
+		<node name="basketSummaryCountOnly" condition="otherwise" value="%0 книг"/>
+		<node name="basketSummary" condition="range 11 19" value="%0 книг, на сумму %1"/>
+		<node name="basketSummary" condition="mod 1 10" value="%0 книгa, на сумму %1"/>
+		<node name="basketSummary" condition="mod 2 10" value="%0 книги, на сумму %1"/>
+		<node name="basketSummary" condition="mod 3 10" value="%0 книги, на сумму %1"/>
+		<node name="basketSummary" condition="mod 4 10" value="%0 книги, на сумму %1"/>
+		<node name="basketSummary" condition="otherwise" value="%0 книг, на сумму %1"/>
 		<node name="alreadyDownloading" value="Книга загружается" />
 		<node name="alreadyDownloadingDemo" value="Фрагмент загружается" />
 		<node name="stoppingCatalogLoading" value="Остановка загрузки" />
