@@ -572,11 +572,13 @@ public abstract class ZLTextView extends ZLTextViewBase {
 	private final char[] myLettersBuffer = new char[512];
 	private int myLettersBufferLength = 0;
 	private ZLTextModel myLettersModel = null;
+	private float myCharWidth = -1f;
 
 	private final float computeCharWidth() {
 		if (myLettersModel != myModel) {
 			myLettersModel = myModel;
 			myLettersBufferLength = 0;
+			myCharWidth = -1f;
 
 			int paragraph = 0;
 			final int textSize = myModel.getTextLength(myModel.getParagraphsNumber() - 1);
@@ -605,8 +607,10 @@ public abstract class ZLTextView extends ZLTextViewBase {
 			}
 		}
 
-		final float charWidth = computeCharWidth(myLettersBuffer, myLettersBufferLength);
-		return charWidth;
+		if (myCharWidth < 0f) {
+			myCharWidth = computeCharWidth(myLettersBuffer, myLettersBufferLength);
+		}
+		return myCharWidth;
 	}
 
 	private final float computeCharWidth(char[] pattern, int length) {
@@ -1330,6 +1334,7 @@ public abstract class ZLTextView extends ZLTextViewBase {
 	public void clearCaches() {
 		rebuildPaintInfo();
 		Application.getViewWidget().reset();
+		myCharWidth = -1;
 	}
 
 	protected void rebuildPaintInfo() {
@@ -1467,7 +1472,7 @@ public abstract class ZLTextView extends ZLTextViewBase {
 		return myCurrentPage.TextElementMap.findRegion(x, y, maxDistance, filter);
 	}
 
-	protected void selectRegion(ZLTextRegion region) {
+	public void selectRegion(ZLTextRegion region) {
 		final ZLTextRegion.Soul soul = region != null ? region.getSoul() : null;
 		if (soul == null || !soul.equals(mySelectedRegionSoul)) {
 			myHighlightSelectedRegion = true;
@@ -1543,7 +1548,7 @@ public abstract class ZLTextView extends ZLTextViewBase {
 		myHighlightSelectedRegion = true;
 	}
 
-	protected ZLTextRegion nextRegion(Direction direction, ZLTextRegion.Filter filter) {
+	public ZLTextRegion nextRegion(Direction direction, ZLTextRegion.Filter filter) {
 		return myCurrentPage.TextElementMap.nextRegion(getSelectedRegion(), direction, filter);
 	}
 
